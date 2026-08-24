@@ -1,4 +1,4 @@
-# A string used to distinguish different Supabase projects on the same host.
+# Unique identifier for the local project configuration.
 project_id = "motourista"
 
 [api]

@@ -22,6 +22,7 @@ interface OnboardingScreenProps {
   onCompleted: () => void;
 }
 
+// [QUESTION] can't this be parsed instead on the database? 
 const DRIVER_TYPES: { label: string; value: DriverType; icon: string }[] = [
   { label: 'Student Permit', value: 'student', icon: 'card-bulleted-outline' },
   { label: 'Non-Professional', value: 'non-pro', icon: 'card-account-details-outline' },
@@ -29,6 +30,7 @@ const DRIVER_TYPES: { label: string; value: DriverType; icon: string }[] = [
   { label: 'None / Learning', value: 'none', icon: 'alert-circle-outline' },
 ];
 
+// [QUESTION] can't this be parsed instead on the database? 
 const VEHICLE_TYPES: { label: string; value: VehicleType; icon: string }[] = [
   { label: 'Scooter (Automatic)', value: 'scooter', icon: 'moped' },
   { label: 'Underbone / Semi', value: 'underbone', icon: 'motorbike' },
@@ -71,11 +73,11 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         if (data.vehicle_type) setVehicleType(data.vehicle_type);
       }
     } catch {
-      // Ignored for initial scaffold
+      // The function ignores errors during initial setup.
     }
   };
 
-  // 1. Pick Photo from Camera / Gallery
+  // Select a photo from the camera or the gallery.
   const handlePickPhoto = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -99,7 +101,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
     }
   };
 
-  // 2. Fetch Current GPS Location
+  // Get the current GPS location.
   const handleGetCurrentLocation = async () => {
     try {
       setLocating(true);
@@ -120,7 +122,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       setLatitude(lat);
       setLongitude(lng);
 
-      // Reverse geocode to get city / province name in the Philippines
+      // Convert coordinates to a city and province name.
       const geocode = await Location.reverseGeocodeAsync({
         latitude: lat,
         longitude: lng,
@@ -146,7 +148,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
     }
   };
 
-  // 3. Save Rider Information & Complete Onboarding
+  // Save the rider profile and finish onboarding.
   const handleSaveProfile = async () => {
     if (!fullName.trim()) {
       Alert.alert('Missing Name', 'Please enter your rider full name.');
@@ -158,7 +160,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
 
       let uploadedAvatarUrl = avatarUri;
 
-      // Update Supabase profile
+      // Update the profile table in the database.
       const { error } = await supabase.from('profiles').upsert({
         id: userId,
         full_name: fullName.trim(),
@@ -193,7 +195,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         keyboardShouldPersistTaps="handled"
         className="px-6 py-10"
       >
-        {/* Header */}
+        {/* Header section */}
         <View className="mb-6">
           <Text className="text-2xl font-extrabold text-white">
             Rider <Text className="text-orange-500">Information</Text>
@@ -203,7 +205,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </Text>
         </View>
 
-        {/* Photo Upload Section */}
+        {/* Photo selection section */}
         <View className="items-center mb-6">
           <TouchableOpacity
             onPress={handlePickPhoto}
@@ -229,7 +231,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </Text>
         </View>
 
-        {/* 1. Rider Full Name */}
+        {/* Rider full name */}
         <View className="mb-4">
           <Text className="text-slate-300 text-xs font-semibold mb-1.5 uppercase">
             Rider Full Name *
@@ -246,7 +248,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </View>
         </View>
 
-        {/* 2. Rider Location (GPS) */}
+        {/* Rider GPS location */}
         <View className="mb-5">
           <Text className="text-slate-300 text-xs font-semibold mb-1.5 uppercase">
             Rider Location Base
@@ -280,7 +282,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </TouchableOpacity>
         </View>
 
-        {/* 3. Driver Type */}
+        {/* Driver license type */}
         <View className="mb-5">
           <Text className="text-slate-300 text-xs font-semibold mb-2 uppercase">
             Driver License Type
@@ -293,11 +295,10 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                   key={type.value}
                   onPress={() => setDriverType(type.value)}
                   activeOpacity={0.7}
-                  className={`flex-row items-center px-3.5 py-2.5 rounded-xl border ${
-                    isSelected
+                  className={`flex-row items-center px-3.5 py-2.5 rounded-xl border ${isSelected
                       ? 'bg-orange-500/20 border-orange-500'
                       : 'bg-slate-900 border-slate-800'
-                  }`}
+                    }`}
                 >
                   <MaterialCommunityIcons
                     name={type.icon as any}
@@ -305,9 +306,8 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                     color={isSelected ? '#F97316' : '#94A3B8'}
                   />
                   <Text
-                    className={`ml-2 text-xs font-semibold ${
-                      isSelected ? 'text-orange-400' : 'text-slate-400'
-                    }`}
+                    className={`ml-2 text-xs font-semibold ${isSelected ? 'text-orange-400' : 'text-slate-400'
+                      }`}
                   >
                     {type.label}
                   </Text>
@@ -317,7 +317,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </View>
         </View>
 
-        {/* 4. Vehicle Type */}
+        {/* Primary vehicle type */}
         <View className="mb-8">
           <Text className="text-slate-300 text-xs font-semibold mb-2 uppercase">
             Primary Vehicle Type
@@ -330,11 +330,10 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                   key={v.value}
                   onPress={() => setVehicleType(v.value)}
                   activeOpacity={0.7}
-                  className={`flex-row items-center px-3 py-2.5 rounded-xl border ${
-                    isSelected
+                  className={`flex-row items-center px-3 py-2.5 rounded-xl border ${isSelected
                       ? 'bg-orange-500/20 border-orange-500'
                       : 'bg-slate-900 border-slate-800'
-                  }`}
+                    }`}
                 >
                   <MaterialCommunityIcons
                     name={v.icon as any}
@@ -342,9 +341,8 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                     color={isSelected ? '#F97316' : '#94A3B8'}
                   />
                   <Text
-                    className={`ml-2 text-xs font-semibold ${
-                      isSelected ? 'text-orange-400' : 'text-slate-400'
-                    }`}
+                    className={`ml-2 text-xs font-semibold ${isSelected ? 'text-orange-400' : 'text-slate-400'
+                      }`}
                   >
                     {v.label}
                   </Text>
@@ -354,7 +352,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </View>
         </View>
 
-        {/* Submit Button */}
+        {/* Form submission button */}
         <TouchableOpacity
           onPress={handleSaveProfile}
           disabled={loading}

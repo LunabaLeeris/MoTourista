@@ -16,7 +16,7 @@ export default function App() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   useEffect(() => {
-    // 1. Initial Session Check
+    // Get the active user session on startup.
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -26,7 +26,7 @@ export default function App() {
       }
     });
 
-    // 2. Auth State Change Listener
+    // Listen for changes to the authentication state.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {

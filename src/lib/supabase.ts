@@ -3,8 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
-// When running on a physical phone, 'localhost' points to the phone itself.
-// Replace with your computer's local Wi-Fi IP (e.g., http://192.168.1.100:54321) in .env
+// [QUESTION] do we need these fallbacks? ugly just throw an error to show that 
+// the public supabase key is not defined
 const fallbackUrl =
   Platform.OS === 'android'
     ? 'http://10.0.2.2:54321'
@@ -13,10 +13,11 @@ const fallbackUrl =
 export const supabaseUrl =
   process.env.EXPO_PUBLIC_SUPABASE_URL || fallbackUrl;
 
+// [CHANGE] remove that default, wtf
 export const supabaseAnonKey =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDAwMDAwMDAsImV4cCI6MTk1NTU1NTU1NX0.dummy-local-key';
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+// [QUESTION] what exactly does this do? does this handle the jwt tokens and all?
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,

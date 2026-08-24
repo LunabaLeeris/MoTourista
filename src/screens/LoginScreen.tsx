@@ -27,7 +27,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // OAuth handler for Google or Facebook
+  // Authenticate the user with Google or Facebook.
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
     try {
       setLoading(true);
@@ -77,7 +77,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     }
   };
 
-  // Direct email login/signup for immediate local testing
+  // Authenticate the user with an email and a password.
   const handleEmailAuth = async () => {
     if (!email || !password) {
       Alert.alert('Required Fields', 'Please enter both an email and password.');
@@ -131,7 +131,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         keyboardShouldPersistTaps="handled"
         className="px-6 py-12 justify-center"
       >
-        {/* Header Branding */}
+        {/* Application header */}
         <View className="items-center mb-8">
           <View className="w-20 h-20 bg-orange-500/20 border-2 border-orange-500 rounded-3xl items-center justify-center mb-4">
             <FontAwesome5 name="motorcycle" size={38} color="#F97316" />
@@ -144,9 +144,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           </Text>
         </View>
 
-        {/* OAuth Buttons */}
+        {/* External login buttons */}
         <View className="space-y-3 mb-6">
-          {/* Google Login */}
+          {/* Google login button */}
           <TouchableOpacity
             onPress={() => handleOAuthLogin('google')}
             disabled={loading}
@@ -159,7 +159,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             </Text>
           </TouchableOpacity>
 
-          {/* Facebook Login */}
+          {/* Facebook login button */}
           <TouchableOpacity
             onPress={() => handleOAuthLogin('facebook')}
             disabled={loading}
@@ -173,7 +173,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Divider */}
+        {/* Form divider */}
         <View className="flex-row items-center my-6">
           <View className="flex-1 h-[1px] bg-slate-800" />
           <Text className="text-slate-500 text-xs font-semibold px-3 uppercase tracking-wider">
@@ -182,7 +182,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           <View className="flex-1 h-[1px] bg-slate-800" />
         </View>
 
-        {/* Email/Password Form */}
+        {/* Email and password form */}
         <View className="space-y-4">
           <View className="mb-3">
             <Text className="text-slate-300 text-xs font-semibold mb-1.5 uppercase">

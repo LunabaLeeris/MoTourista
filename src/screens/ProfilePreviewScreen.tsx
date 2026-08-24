@@ -41,7 +41,7 @@ export default function ProfilePreviewScreen({
       if (error) throw error;
       setProfile(data);
     } catch {
-      // Ignored
+      // The function ignores errors during fetch.
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export default function ProfilePreviewScreen({
 
   return (
     <ScrollView className="flex-1 bg-slate-950 px-6 py-12">
-      {/* Top Bar */}
+      {/* Top navigation bar */}
       <View className="flex-row items-center justify-between mb-8">
         <View className="flex-row items-center">
           <FontAwesome5 name="motorcycle" size={24} color="#F97316" />
@@ -82,7 +82,7 @@ export default function ProfilePreviewScreen({
         </TouchableOpacity>
       </View>
 
-      {/* Profile Card */}
+      {/* Rider profile card */}
       <View className="bg-slate-900 border border-slate-800 rounded-3xl p-6 items-center shadow-lg mb-6">
         {profile?.avatar_url ? (
           <Image
@@ -106,7 +106,7 @@ export default function ProfilePreviewScreen({
           </Text>
         </View>
 
-        {/* Badges / Status row */}
+        {/* Status badges */}
         <View className="flex-row gap-2 mt-4">
           <View className="bg-orange-500/10 border border-orange-500/30 px-3 py-1 rounded-full">
             <Text className="text-orange-400 text-xs font-semibold uppercase">
@@ -121,7 +121,7 @@ export default function ProfilePreviewScreen({
         </View>
       </View>
 
-      {/* Rider Info Details */}
+      {/* Rider information list */}
       <View className="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 space-y-4">
         <Text className="text-white font-bold text-base mb-2">
           Rider Credentials
@@ -151,7 +151,7 @@ export default function ProfilePreviewScreen({
         </View>
       </View>
 
-      {/* Action Buttons */}
+      {/* Action buttons */}
       <TouchableOpacity
         onPress={onEditProfile}
         activeOpacity={0.8}

@@ -1,3 +1,4 @@
+// [QUESTION] is there a way to check if these correctly matches the types in database?
 export type DriverType = 'student' | 'non-pro' | 'pro' | 'none';
 
 export type VehicleType =

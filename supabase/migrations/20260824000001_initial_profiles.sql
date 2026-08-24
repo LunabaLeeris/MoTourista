@@ -1,7 +1,8 @@
--- Enable UUID extension
+-- Enable the UUID extension.
 create extension if not exists "uuid-ossp";
 
--- 1. Create Profiles Table
+-- Create the profiles table.
+-- [QUESTION] can't we just move the driver_type and vehicle_type to their own table so it's much easier to maintain?
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   full_name text default '',
@@ -16,10 +17,10 @@ create table if not exists public.profiles (
   updated_at timestamptz default timezone('utc'::text, now()) not null
 );
 
--- 2. Enable Row Level Security (RLS)
+-- Enable row level security on the profiles table.
 alter table public.profiles enable row level security;
 
--- Policies
+-- Define access policies for the profiles table.
 drop policy if exists "Profiles are viewable by authenticated users" on public.profiles;
 create policy "Profiles are viewable by authenticated users"
   on public.profiles for select
@@ -38,8 +39,8 @@ create policy "Users can insert their own profile"
   to authenticated
   with check (auth.uid() = id);
 
--- 3. Procedural Trigger Function: handle_new_user
--- Automatically populates profile with OAuth (Google / Facebook) info or defaults upon signup
+-- Define the trigger function for new user profiles.
+-- The function copies user data into the profiles table during registration.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -66,13 +67,13 @@ begin
 end;
 $$;
 
--- Drop trigger if exists and recreate
+-- Attach the trigger to the users table in the auth schema.
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- 4. Setup Storage Bucket for Avatars
+-- Create the storage bucket for user profile photos.
 insert into storage.buckets (id, name, public)
 values ('avatars', 'avatars', true)
 on conflict (id) do nothing;

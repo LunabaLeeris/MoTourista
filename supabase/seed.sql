@@ -1,2 +1,2 @@
--- MoTourista Seed Data
--- Initial categories or sample records will be placed here
+-- Seed data for the application database.
+-- Add initial records and categories to this file.
