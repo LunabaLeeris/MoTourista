@@ -11,10 +11,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 import { DriverTypeRow, VehicleTypeRow } from '../types/database';
+import { getCurrentRiderLocation } from '../services/locationService';
 
 interface OnboardingScreenProps {
   userId: string;
@@ -126,70 +126,12 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
   const handleGetCurrentLocation = async () => {
     try {
       setLocating(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Location Permission Denied',
-          'Please allow location access to get your current coordinates.'
-        );
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      const { latitude: lat, longitude: lng } = location.coords;
-      setLatitude(lat);
-      setLongitude(lng);
-
-      // Convert coordinates to a readable address based on platform.
-      if (Platform.OS === 'web') {
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            const address = data?.address;
-            const city =
-              address?.city ||
-              address?.town ||
-              address?.municipality ||
-              address?.county;
-            const region = address?.state || address?.region || address?.country;
-            const formatted = [city, region].filter(Boolean).join(', ');
-            setLocationName(formatted || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            return;
-          }
-        } catch {
-          // The function falls back to numeric coordinates if reverse geocoding fails.
-        }
-        setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      } else {
-        const geocode = await Location.reverseGeocodeAsync({
-          latitude: lat,
-          longitude: lng,
-        });
-
-        if (geocode && geocode.length > 0) {
-          const place = geocode[0];
-          const readableLocation = [
-            place.city || place.subregion || place.district,
-            place.region || place.country,
-          ]
-            .filter(Boolean)
-            .join(', ');
-
-          setLocationName(
-            readableLocation || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-          );
-        } else {
-          setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-        }
-      }
+      const result = await getCurrentRiderLocation();
+      setLatitude(result.latitude);
+      setLongitude(result.longitude);
+      setLocationName(result.readableLocation);
     } catch (err: any) {
-      Alert.alert('Location Error', `Could not get GPS location: ${err.message}`);
+      Alert.alert('Location Notice', err.message || 'Could not get location.');
     } finally {
       setLocating(false);
     }
