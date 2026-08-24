@@ -1,8 +1,39 @@
 -- Enable the UUID extension.
 create extension if not exists "uuid-ossp";
 
+-- Create the driver types lookup table.
+create table if not exists public.driver_types (
+  id text primary key,
+  label text not null,
+  icon text not null,
+  display_order int default 0,
+  created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+-- Create the vehicle types lookup table.
+create table if not exists public.vehicle_types (
+  id text primary key,
+  label text not null,
+  icon text not null,
+  display_order int default 0,
+  created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+-- Enable row level security on lookup tables.
+alter table public.driver_types enable row level security;
+alter table public.vehicle_types enable row level security;
+
+-- Allow public read access to driver types.
+create policy "Allow read access to driver_types"
+  on public.driver_types for select
+  using (true);
+
+-- Allow public read access to vehicle types.
+create policy "Allow read access to vehicle_types"
+  on public.vehicle_types for select
+  using (true);
+
 -- Create the profiles table.
--- [QUESTION] can't we just move the driver_type and vehicle_type to their own table so it's much easier to maintain?
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   full_name text default '',
@@ -10,8 +41,8 @@ create table if not exists public.profiles (
   location_name text default '',
   latitude numeric,
   longitude numeric,
-  driver_type text check (driver_type in ('student', 'non-pro', 'pro', 'none')) default 'none',
-  vehicle_type text check (vehicle_type in ('scooter', 'underbone', 'backbone_manual', 'cruiser', 'adventure', 'sportbike', 'maxi_scooter', 'other')) default 'scooter',
+  driver_type_id text references public.driver_types(id) on update cascade on delete set null,
+  vehicle_type_id text references public.vehicle_types(id) on update cascade on delete set null,
   is_onboarded boolean default false,
   created_at timestamptz default timezone('utc'::text, now()) not null,
   updated_at timestamptz default timezone('utc'::text, now()) not null

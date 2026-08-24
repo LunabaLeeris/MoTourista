@@ -11,69 +11,81 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
-import { DriverType, VehicleType } from '../types/database';
+import { DriverTypeRow, VehicleTypeRow } from '../types/database';
 
 interface OnboardingScreenProps {
   userId: string;
   onCompleted: () => void;
 }
 
-// [QUESTION] can't this be parsed instead on the database? 
-const DRIVER_TYPES: { label: string; value: DriverType; icon: string }[] = [
-  { label: 'Student Permit', value: 'student', icon: 'card-bulleted-outline' },
-  { label: 'Non-Professional', value: 'non-pro', icon: 'card-account-details-outline' },
-  { label: 'Professional', value: 'pro', icon: 'shield-check-outline' },
-  { label: 'None / Learning', value: 'none', icon: 'alert-circle-outline' },
-];
-
-// [QUESTION] can't this be parsed instead on the database? 
-const VEHICLE_TYPES: { label: string; value: VehicleType; icon: string }[] = [
-  { label: 'Scooter (Automatic)', value: 'scooter', icon: 'moped' },
-  { label: 'Underbone / Semi', value: 'underbone', icon: 'motorbike' },
-  { label: 'Backbone / Manual', value: 'backbone_manual', icon: 'motorcycle' },
-  { label: 'Maxi Scooter (400cc+)', value: 'maxi_scooter', icon: 'moped' },
-  { label: 'Adventure / Dual Sport', value: 'adventure', icon: 'compass-outline' },
-  { label: 'Sportbike', value: 'sportbike', icon: 'speedometer' },
-  { label: 'Cruiser / Classic', value: 'cruiser', icon: 'car-cruise-control' },
-  { label: 'Other', value: 'other', icon: 'dots-horizontal-circle-outline' },
-];
-
 export default function OnboardingScreen({ userId, onCompleted }: OnboardingScreenProps) {
   const [fullName, setFullName] = useState('');
   const [locationName, setLocationName] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [driverType, setDriverType] = useState<DriverType>('non-pro');
-  const [vehicleType, setVehicleType] = useState<VehicleType>('scooter');
+  const [driverTypes, setDriverTypes] = useState<DriverTypeRow[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeRow[]>([]);
+  const [selectedDriverTypeId, setSelectedDriverTypeId] = useState<string | null>(null);
+  const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState<string | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [fetchingOptions, setFetchingOptions] = useState(true);
 
   useEffect(() => {
-    loadExistingProfile();
+    loadLookupOptionsAndProfile();
   }, []);
 
-  const loadExistingProfile = async () => {
+  const loadLookupOptionsAndProfile = async () => {
     try {
-      const { data, error } = await supabase
+      setFetchingOptions(true);
+
+      // Fetch driver types from the database.
+      const { data: dTypes } = await supabase
+        .from('driver_types')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (dTypes && dTypes.length > 0) {
+        setDriverTypes(dTypes);
+        setSelectedDriverTypeId(dTypes[0].id);
+      }
+
+      // Fetch vehicle types from the database.
+      const { data: vTypes } = await supabase
+        .from('vehicle_types')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (vTypes && vTypes.length > 0) {
+        setVehicleTypes(vTypes);
+        setSelectedVehicleTypeId(vTypes[0].id);
+      }
+
+      // Load existing rider profile if available.
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (data && !error) {
-        if (data.full_name) setFullName(data.full_name);
-        if (data.avatar_url) setAvatarUri(data.avatar_url);
-        if (data.location_name) setLocationName(data.location_name);
-        if (data.driver_type) setDriverType(data.driver_type);
-        if (data.vehicle_type) setVehicleType(data.vehicle_type);
+      if (profile) {
+        if (profile.full_name) setFullName(profile.full_name);
+        if (profile.avatar_url) setAvatarUri(profile.avatar_url);
+        if (profile.location_name) setLocationName(profile.location_name);
+        if (profile.latitude) setLatitude(profile.latitude);
+        if (profile.longitude) setLongitude(profile.longitude);
+        if (profile.driver_type_id) setSelectedDriverTypeId(profile.driver_type_id);
+        if (profile.vehicle_type_id) setSelectedVehicleTypeId(profile.vehicle_type_id);
       }
     } catch {
-      // The function ignores errors during initial setup.
+      // The function ignores errors during initial data load.
+    } finally {
+      setFetchingOptions(false);
     }
   };
 
@@ -158,18 +170,16 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
     try {
       setLoading(true);
 
-      let uploadedAvatarUrl = avatarUri;
-
       // Update the profile table in the database.
       const { error } = await supabase.from('profiles').upsert({
         id: userId,
         full_name: fullName.trim(),
-        avatar_url: uploadedAvatarUrl,
+        avatar_url: avatarUri,
         location_name: locationName.trim() || 'Philippines',
         latitude: latitude,
         longitude: longitude,
-        driver_type: driverType,
-        vehicle_type: vehicleType,
+        driver_type_id: selectedDriverTypeId,
+        vehicle_type_id: selectedVehicleTypeId,
         is_onboarded: true,
         updated_at: new Date().toISOString(),
       });
@@ -184,6 +194,17 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       setLoading(false);
     }
   };
+
+  if (fetchingOptions) {
+    return (
+      <View className="flex-1 bg-slate-950 items-center justify-center">
+        <ActivityIndicator size="large" color="#F97316" />
+        <Text className="text-slate-400 text-sm mt-3 font-medium">
+          Loading Rider Options...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -288,17 +309,18 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
             Driver License Type
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            {DRIVER_TYPES.map((type) => {
-              const isSelected = driverType === type.value;
+            {driverTypes.map((type) => {
+              const isSelected = selectedDriverTypeId === type.id;
               return (
                 <TouchableOpacity
-                  key={type.value}
-                  onPress={() => setDriverType(type.value)}
+                  key={type.id}
+                  onPress={() => setSelectedDriverTypeId(type.id)}
                   activeOpacity={0.7}
-                  className={`flex-row items-center px-3.5 py-2.5 rounded-xl border ${isSelected
+                  className={`flex-row items-center px-3.5 py-2.5 rounded-xl border ${
+                    isSelected
                       ? 'bg-orange-500/20 border-orange-500'
                       : 'bg-slate-900 border-slate-800'
-                    }`}
+                  }`}
                 >
                   <MaterialCommunityIcons
                     name={type.icon as any}
@@ -306,8 +328,9 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                     color={isSelected ? '#F97316' : '#94A3B8'}
                   />
                   <Text
-                    className={`ml-2 text-xs font-semibold ${isSelected ? 'text-orange-400' : 'text-slate-400'
-                      }`}
+                    className={`ml-2 text-xs font-semibold ${
+                      isSelected ? 'text-orange-400' : 'text-slate-400'
+                    }`}
                   >
                     {type.label}
                   </Text>
@@ -323,17 +346,18 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
             Primary Vehicle Type
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            {VEHICLE_TYPES.map((v) => {
-              const isSelected = vehicleType === v.value;
+            {vehicleTypes.map((v) => {
+              const isSelected = selectedVehicleTypeId === v.id;
               return (
                 <TouchableOpacity
-                  key={v.value}
-                  onPress={() => setVehicleType(v.value)}
+                  key={v.id}
+                  onPress={() => setSelectedVehicleTypeId(v.id)}
                   activeOpacity={0.7}
-                  className={`flex-row items-center px-3 py-2.5 rounded-xl border ${isSelected
+                  className={`flex-row items-center px-3 py-2.5 rounded-xl border ${
+                    isSelected
                       ? 'bg-orange-500/20 border-orange-500'
                       : 'bg-slate-900 border-slate-800'
-                    }`}
+                  }`}
                 >
                   <MaterialCommunityIcons
                     name={v.icon as any}
@@ -341,8 +365,9 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                     color={isSelected ? '#F97316' : '#94A3B8'}
                   />
                   <Text
-                    className={`ml-2 text-xs font-semibold ${isSelected ? 'text-orange-400' : 'text-slate-400'
-                      }`}
+                    className={`ml-2 text-xs font-semibold ${
+                      isSelected ? 'text-orange-400' : 'text-slate-400'
+                    }`}
                   >
                     {v.label}
                   </Text>

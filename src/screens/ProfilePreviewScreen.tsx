@@ -7,9 +7,9 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { Profile } from '../types/database';
+import { ProfileWithDetails } from '../types/database';
 
 interface ProfilePreviewScreenProps {
   userId: string;
@@ -22,7 +22,7 @@ export default function ProfilePreviewScreen({
   onEditProfile,
   onSignOut,
 }: ProfilePreviewScreenProps) {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,14 +34,14 @@ export default function ProfilePreviewScreen({
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, driver_types (*), vehicle_types (*)')
         .eq('id', userId)
         .single();
 
       if (error) throw error;
-      setProfile(data);
+      setProfile(data as ProfileWithDetails);
     } catch {
-      // The function ignores errors during fetch.
+      // The function ignores errors during profile retrieval.
     } finally {
       setLoading(false);
     }
@@ -62,6 +62,9 @@ export default function ProfilePreviewScreen({
       </View>
     );
   }
+
+  const driverLabel = profile?.driver_types?.label || 'None';
+  const vehicleLabel = profile?.vehicle_types?.label || 'Not specified';
 
   return (
     <ScrollView className="flex-1 bg-slate-950 px-6 py-12">
@@ -110,12 +113,12 @@ export default function ProfilePreviewScreen({
         <View className="flex-row gap-2 mt-4">
           <View className="bg-orange-500/10 border border-orange-500/30 px-3 py-1 rounded-full">
             <Text className="text-orange-400 text-xs font-semibold uppercase">
-              {profile?.driver_type || 'Rider'} License
+              {driverLabel}
             </Text>
           </View>
           <View className="bg-blue-500/10 border border-blue-500/30 px-3 py-1 rounded-full">
             <Text className="text-blue-400 text-xs font-semibold uppercase">
-              {profile?.vehicle_type?.replace('_', ' ') || 'Motorcycle'}
+              {vehicleLabel}
             </Text>
           </View>
         </View>
@@ -129,15 +132,15 @@ export default function ProfilePreviewScreen({
 
         <View className="flex-row items-center justify-between py-2 border-b border-slate-800">
           <Text className="text-slate-400 text-sm">License Type</Text>
-          <Text className="text-slate-200 font-semibold text-sm capitalize">
-            {profile?.driver_type || 'None'}
+          <Text className="text-slate-200 font-semibold text-sm">
+            {driverLabel}
           </Text>
         </View>
 
         <View className="flex-row items-center justify-between py-2 border-b border-slate-800">
           <Text className="text-slate-400 text-sm">Motorcycle Type</Text>
-          <Text className="text-slate-200 font-semibold text-sm capitalize">
-            {profile?.vehicle_type?.replace('_', ' ') || 'Not specified'}
+          <Text className="text-slate-200 font-semibold text-sm">
+            {vehicleLabel}
           </Text>
         </View>
 

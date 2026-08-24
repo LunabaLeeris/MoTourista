@@ -1,26 +1,14 @@
-// [QUESTION] is there a way to check if these correctly matches the types in database?
-export type DriverType = 'student' | 'non-pro' | 'pro' | 'none';
+import { Database, Tables, TablesInsert, TablesUpdate } from './database.generated';
 
-export type VehicleType =
-  | 'scooter'
-  | 'underbone'
-  | 'backbone_manual'
-  | 'cruiser'
-  | 'adventure'
-  | 'sportbike'
-  | 'maxi_scooter'
-  | 'other';
+export type { Database, Tables, TablesInsert, TablesUpdate };
 
-export interface Profile {
-  id: string;
-  full_name: string;
-  avatar_url?: string | null;
-  location_name?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  driver_type: DriverType;
-  vehicle_type: VehicleType;
-  is_onboarded: boolean;
-  created_at?: string;
-  updated_at?: string;
+// Type aliases for database tables.
+export type DriverTypeRow = Tables<'driver_types'>;
+export type VehicleTypeRow = Tables<'vehicle_types'>;
+export type ProfileRow = Tables<'profiles'>;
+
+// Extended profile type that includes lookup relations.
+export interface ProfileWithDetails extends ProfileRow {
+  driver_types?: DriverTypeRow | null;
+  vehicle_types?: VehicleTypeRow | null;
 }
