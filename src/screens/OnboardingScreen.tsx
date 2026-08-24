@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
@@ -94,7 +93,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Please allow gallery access to select a rider photo.');
+        Alert.alert('Permission Denied', 'Please allow gallery access to select a photo.');
         return;
       }
 
@@ -121,7 +120,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       if (status !== 'granted') {
         Alert.alert(
           'Location Permission Denied',
-          'Please allow location access to auto-detect your current rider base.'
+          'Please allow location access to get your current coordinates.'
         );
         return;
       }
@@ -154,7 +153,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
       }
     } catch (err: any) {
-      Alert.alert('Location Error', `Could not fetch GPS location: ${err.message}`);
+      Alert.alert('Location Error', `Could not get GPS location: ${err.message}`);
     } finally {
       setLocating(false);
     }
@@ -163,7 +162,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
   // Save the rider profile and finish onboarding.
   const handleSaveProfile = async () => {
     if (!fullName.trim()) {
-      Alert.alert('Missing Name', 'Please enter your rider full name.');
+      Alert.alert('Missing Name', 'Please enter your name.');
       return;
     }
 
@@ -186,10 +185,9 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
 
       if (error) throw error;
 
-      Alert.alert('Profile Complete!', 'Welcome to MoTourista Philippines!');
       onCompleted();
     } catch (err: any) {
-      Alert.alert('Save Error', err.message || 'Failed to save rider information.');
+      Alert.alert('Save Error', err.message || 'Failed to save information.');
     } finally {
       setLoading(false);
     }
@@ -197,10 +195,10 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
 
   if (fetchingOptions) {
     return (
-      <View className="flex-1 bg-slate-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#F97316" />
-        <Text className="text-slate-400 text-sm mt-3 font-medium">
-          Loading Rider Options...
+      <View className="flex-1 bg-white items-center justify-center p-6">
+        <ActivityIndicator color="#000" />
+        <Text className="text-sm text-neutral-600 mt-2">
+          Loading options...
         </Text>
       </View>
     );
@@ -209,104 +207,89 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-slate-950"
+      className="flex-1 bg-white"
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
-        className="px-6 py-10"
+        className="p-6 max-w-md w-full self-center"
       >
-        {/* Header section */}
+        {/* Title */}
         <View className="mb-6">
-          <Text className="text-2xl font-extrabold text-white">
-            Rider <Text className="text-orange-500">Information</Text>
+          <Text className="text-xl font-bold text-black mb-1">
+            Rider Profile Setup
           </Text>
-          <Text className="text-slate-400 text-sm mt-1">
-            Complete your profile to start logging Philippine motorcycle hotspots!
+          <Text className="text-xs text-neutral-600">
+            Fill in your rider details below.
           </Text>
         </View>
 
-        {/* Photo selection section */}
-        <View className="items-center mb-6">
+        {/* Photo selection */}
+        <View className="mb-4">
+          <Text className="text-xs font-medium text-neutral-700 mb-1">
+            Photo
+          </Text>
           <TouchableOpacity
             onPress={handlePickPhoto}
-            activeOpacity={0.8}
-            className="relative"
+            className="border border-neutral-300 p-3 rounded items-center justify-center"
           >
             {avatarUri ? (
               <Image
                 source={{ uri: avatarUri }}
-                className="w-24 h-24 rounded-full border-2 border-orange-500"
+                className="w-20 h-20 rounded mb-2"
               />
-            ) : (
-              <View className="w-24 h-24 rounded-full bg-slate-900 border-2 border-dashed border-slate-700 items-center justify-center">
-                <Ionicons name="camera-outline" size={32} color="#94A3B8" />
-              </View>
-            )}
-            <View className="absolute bottom-0 right-0 bg-orange-500 rounded-full p-2 border-2 border-slate-950">
-              <Ionicons name="pencil" size={14} color="#FFFFFF" />
-            </View>
+            ) : null}
+            <Text className="text-sm text-black">
+              {avatarUri ? 'Change Photo' : 'Select Photo'}
+            </Text>
           </TouchableOpacity>
-          <Text className="text-slate-400 text-xs mt-2 font-medium">
-            Upload Rider Photo
-          </Text>
         </View>
 
-        {/* Rider full name */}
+        {/* Name input */}
         <View className="mb-4">
-          <Text className="text-slate-300 text-xs font-semibold mb-1.5 uppercase">
-            Rider Full Name *
+          <Text className="text-xs font-medium text-neutral-700 mb-1">
+            Name
           </Text>
-          <View className="flex-row items-center bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-3">
-            <Ionicons name="person-outline" size={18} color="#94A3B8" />
-            <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="e.g. Juan dela Cruz"
-              placeholderTextColor="#64748B"
-              className="flex-1 text-white ml-2.5 text-base"
-            />
-          </View>
+          <TextInput
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Full Name"
+            placeholderTextColor="#888"
+            className="border border-neutral-300 p-3 rounded text-black"
+          />
         </View>
 
-        {/* Rider GPS location */}
-        <View className="mb-5">
-          <Text className="text-slate-300 text-xs font-semibold mb-1.5 uppercase">
-            Rider Location Base
+        {/* Location input */}
+        <View className="mb-4">
+          <Text className="text-xs font-medium text-neutral-700 mb-1">
+            Location
           </Text>
-          <View className="flex-row items-center bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 mb-2">
-            <Ionicons name="location-outline" size={18} color="#94A3B8" />
-            <TextInput
-              value={locationName}
-              onChangeText={setLocationName}
-              placeholder="e.g. Antipolo, Rizal"
-              placeholderTextColor="#64748B"
-              className="flex-1 text-white ml-2.5 text-base"
-            />
-          </View>
+          <TextInput
+            value={locationName}
+            onChangeText={setLocationName}
+            placeholder="City / Province"
+            placeholderTextColor="#888"
+            className="border border-neutral-300 p-3 rounded text-black mb-2"
+          />
           <TouchableOpacity
             onPress={handleGetCurrentLocation}
             disabled={locating}
-            activeOpacity={0.7}
-            className="flex-row items-center justify-center bg-slate-800/80 border border-slate-700 py-2.5 px-4 rounded-xl"
+            className="border border-neutral-300 p-2 rounded items-center"
           >
             {locating ? (
-              <ActivityIndicator size="small" color="#F97316" />
+              <ActivityIndicator size="small" color="#000" />
             ) : (
-              <>
-                <Ionicons name="navigate-circle-outline" size={18} color="#F97316" />
-                <Text className="text-orange-400 font-semibold text-xs ml-2">
-                  Use Current GPS Location
-                </Text>
-              </>
+              <Text className="text-xs text-black">
+                Use Current Location
+              </Text>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Driver license type */}
-        <View className="mb-5">
-          <Text className="text-slate-300 text-xs font-semibold mb-2 uppercase">
-            Driver License Type
+        {/* Driver Type selector */}
+        <View className="mb-4">
+          <Text className="text-xs font-medium text-neutral-700 mb-1">
+            Driver Type
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {driverTypes.map((type) => {
@@ -315,21 +298,15 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                 <TouchableOpacity
                   key={type.id}
                   onPress={() => setSelectedDriverTypeId(type.id)}
-                  activeOpacity={0.7}
-                  className={`flex-row items-center px-3.5 py-2.5 rounded-xl border ${
+                  className={`border p-2 rounded ${
                     isSelected
-                      ? 'bg-orange-500/20 border-orange-500'
-                      : 'bg-slate-900 border-slate-800'
+                      ? 'border-black bg-neutral-100'
+                      : 'border-neutral-300'
                   }`}
                 >
-                  <MaterialCommunityIcons
-                    name={type.icon as any}
-                    size={16}
-                    color={isSelected ? '#F97316' : '#94A3B8'}
-                  />
                   <Text
-                    className={`ml-2 text-xs font-semibold ${
-                      isSelected ? 'text-orange-400' : 'text-slate-400'
+                    className={`text-xs ${
+                      isSelected ? 'font-bold text-black' : 'text-neutral-700'
                     }`}
                   >
                     {type.label}
@@ -340,10 +317,10 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </View>
         </View>
 
-        {/* Primary vehicle type */}
-        <View className="mb-8">
-          <Text className="text-slate-300 text-xs font-semibold mb-2 uppercase">
-            Primary Vehicle Type
+        {/* Vehicle Type selector */}
+        <View className="mb-6">
+          <Text className="text-xs font-medium text-neutral-700 mb-1">
+            Vehicle Type
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {vehicleTypes.map((v) => {
@@ -352,21 +329,15 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
                 <TouchableOpacity
                   key={v.id}
                   onPress={() => setSelectedVehicleTypeId(v.id)}
-                  activeOpacity={0.7}
-                  className={`flex-row items-center px-3 py-2.5 rounded-xl border ${
+                  className={`border p-2 rounded ${
                     isSelected
-                      ? 'bg-orange-500/20 border-orange-500'
-                      : 'bg-slate-900 border-slate-800'
+                      ? 'border-black bg-neutral-100'
+                      : 'border-neutral-300'
                   }`}
                 >
-                  <MaterialCommunityIcons
-                    name={v.icon as any}
-                    size={16}
-                    color={isSelected ? '#F97316' : '#94A3B8'}
-                  />
                   <Text
-                    className={`ml-2 text-xs font-semibold ${
-                      isSelected ? 'text-orange-400' : 'text-slate-400'
+                    className={`text-xs ${
+                      isSelected ? 'font-bold text-black' : 'text-neutral-700'
                     }`}
                   >
                     {v.label}
@@ -377,18 +348,17 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </View>
         </View>
 
-        {/* Form submission button */}
+        {/* Submit Button */}
         <TouchableOpacity
           onPress={handleSaveProfile}
           disabled={loading}
-          activeOpacity={0.8}
-          className="bg-orange-500 py-3.5 rounded-xl items-center justify-center shadow-lg shadow-orange-500/20 mb-8"
+          className="bg-black p-3 rounded items-center justify-center mb-6"
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-white font-bold text-base">
-              Complete Setup & Enter MoTourista
+            <Text className="text-white font-medium">
+              Save Profile
             </Text>
           )}
         </TouchableOpacity>

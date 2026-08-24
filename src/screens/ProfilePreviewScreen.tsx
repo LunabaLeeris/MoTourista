@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { ProfileWithDetails } from '../types/database';
 
@@ -54,10 +53,10 @@ export default function ProfilePreviewScreen({
 
   if (loading) {
     return (
-      <View className="flex-1 bg-slate-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#F97316" />
-        <Text className="text-slate-400 text-sm mt-3 font-medium">
-          Loading Rider Profile...
+      <View className="flex-1 bg-white items-center justify-center p-6">
+        <ActivityIndicator color="#000" />
+        <Text className="text-sm text-neutral-600 mt-2">
+          Loading profile...
         </Text>
       </View>
     );
@@ -67,102 +66,69 @@ export default function ProfilePreviewScreen({
   const vehicleLabel = profile?.vehicle_types?.label || 'Not specified';
 
   return (
-    <ScrollView className="flex-1 bg-slate-950 px-6 py-12">
-      {/* Top navigation bar */}
-      <View className="flex-row items-center justify-between mb-8">
-        <View className="flex-row items-center">
-          <FontAwesome5 name="motorcycle" size={24} color="#F97316" />
-          <Text className="text-xl font-extrabold text-white ml-2">
-            Mo<Text className="text-orange-500">Tourista</Text>
-          </Text>
-        </View>
+    <ScrollView className="flex-1 bg-white p-6 max-w-md w-full self-center">
+      {/* Header */}
+      <View className="flex-row items-center justify-between mb-6 pb-3 border-b border-neutral-200">
+        <Text className="text-xl font-bold text-black">
+          Rider Profile
+        </Text>
         <TouchableOpacity
           onPress={handleSignOut}
-          className="flex-row items-center bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg"
+          className="border border-neutral-300 px-3 py-1.5 rounded"
         >
-          <Ionicons name="log-out-outline" size={16} color="#EF4444" />
-          <Text className="text-red-400 text-xs font-semibold ml-1">Sign Out</Text>
+          <Text className="text-xs text-black">Sign Out</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Rider profile card */}
-      <View className="bg-slate-900 border border-slate-800 rounded-3xl p-6 items-center shadow-lg mb-6">
+      {/* Photo Preview */}
+      <View className="items-center mb-6">
         {profile?.avatar_url ? (
           <Image
             source={{ uri: profile.avatar_url }}
-            className="w-28 h-28 rounded-full border-4 border-orange-500 mb-4"
+            className="w-24 h-24 rounded border border-neutral-300 mb-2"
           />
         ) : (
-          <View className="w-28 h-28 rounded-full bg-slate-800 border-4 border-orange-500 items-center justify-center mb-4">
-            <Ionicons name="person" size={54} color="#94A3B8" />
+          <View className="w-24 h-24 rounded border border-neutral-300 items-center justify-center mb-2">
+            <Text className="text-xs text-neutral-400">No Photo</Text>
           </View>
         )}
-
-        <Text className="text-2xl font-bold text-white text-center">
-          {profile?.full_name || 'Anonymous Rider'}
+        <Text className="text-lg font-bold text-black">
+          {profile?.full_name || 'No Name'}
         </Text>
-
-        <View className="flex-row items-center mt-1">
-          <Ionicons name="location-sharp" size={16} color="#F97316" />
-          <Text className="text-slate-400 text-sm ml-1">
-            {profile?.location_name || 'Philippines'}
-          </Text>
-        </View>
-
-        {/* Status badges */}
-        <View className="flex-row gap-2 mt-4">
-          <View className="bg-orange-500/10 border border-orange-500/30 px-3 py-1 rounded-full">
-            <Text className="text-orange-400 text-xs font-semibold uppercase">
-              {driverLabel}
-            </Text>
-          </View>
-          <View className="bg-blue-500/10 border border-blue-500/30 px-3 py-1 rounded-full">
-            <Text className="text-blue-400 text-xs font-semibold uppercase">
-              {vehicleLabel}
-            </Text>
-          </View>
-        </View>
+        <Text className="text-xs text-neutral-600">
+          {profile?.location_name || 'No Location'}
+        </Text>
       </View>
 
-      {/* Rider information list */}
-      <View className="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 space-y-4">
-        <Text className="text-white font-bold text-base mb-2">
-          Rider Credentials
-        </Text>
-
-        <View className="flex-row items-center justify-between py-2 border-b border-slate-800">
-          <Text className="text-slate-400 text-sm">License Type</Text>
-          <Text className="text-slate-200 font-semibold text-sm">
-            {driverLabel}
-          </Text>
+      {/* Profile Details List */}
+      <View className="border border-neutral-200 rounded p-4 mb-6">
+        <View className="flex-row justify-between py-2 border-b border-neutral-100">
+          <Text className="text-xs text-neutral-500">License Type</Text>
+          <Text className="text-xs font-medium text-black">{driverLabel}</Text>
         </View>
 
-        <View className="flex-row items-center justify-between py-2 border-b border-slate-800">
-          <Text className="text-slate-400 text-sm">Motorcycle Type</Text>
-          <Text className="text-slate-200 font-semibold text-sm">
-            {vehicleLabel}
-          </Text>
+        <View className="flex-row justify-between py-2 border-b border-neutral-100">
+          <Text className="text-xs text-neutral-500">Vehicle Type</Text>
+          <Text className="text-xs font-medium text-black">{vehicleLabel}</Text>
         </View>
 
-        <View className="flex-row items-center justify-between py-2">
-          <Text className="text-slate-400 text-sm">GPS Coordinates</Text>
-          <Text className="text-slate-200 font-semibold text-xs">
+        <View className="flex-row justify-between py-2">
+          <Text className="text-xs text-neutral-500">Coordinates</Text>
+          <Text className="text-xs text-black">
             {profile?.latitude && profile?.longitude
               ? `${profile.latitude.toFixed(4)}, ${profile.longitude.toFixed(4)}`
-              : 'Not calibrated'}
+              : 'None'}
           </Text>
         </View>
       </View>
 
-      {/* Action buttons */}
+      {/* Action Button */}
       <TouchableOpacity
         onPress={onEditProfile}
-        activeOpacity={0.8}
-        className="bg-slate-800 border border-slate-700 py-3.5 rounded-xl items-center justify-center flex-row mb-12"
+        className="border border-black p-3 rounded items-center justify-center mb-8"
       >
-        <Ionicons name="create-outline" size={18} color="#FFFFFF" />
-        <Text className="text-white font-semibold text-base ml-2">
-          Update Rider Information
+        <Text className="text-sm font-medium text-black">
+          Edit Information
         </Text>
       </TouchableOpacity>
     </ScrollView>

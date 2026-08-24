@@ -65,16 +65,16 @@ export default function App() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-slate-950 items-center justify-center">
-        <ActivityIndicator size="large" color="#F97316" />
+      <View className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator color="#000" />
       </View>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView className="flex-1 bg-slate-950">
-        <StatusBar style="light" />
+      <SafeAreaView className="flex-1 bg-white">
+        <StatusBar style="dark" />
         {!session ? (
           <LoginScreen onLoginSuccess={() => setLoading(true)} />
         ) : !isOnboarded || isEditing ? (

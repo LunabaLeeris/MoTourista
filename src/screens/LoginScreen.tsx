@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '../lib/supabase';
@@ -70,7 +69,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     } catch (err: any) {
       Alert.alert(
         'OAuth Notice',
-        `To use ${provider.toUpperCase()} login locally, ensure OAuth credentials are configured in Supabase. You can also use the email login below for immediate testing!\n\nDetails: ${err.message}`
+        `OAuth provider returned an error: ${err.message}`
       );
     } finally {
       setLoading(false);
@@ -102,7 +101,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         } else {
           Alert.alert(
             'Account Created',
-            'Signed up successfully! You can now log in.'
+            'Signed up successfully. You can now log in.'
           );
           setIsSignUp(false);
         }
@@ -124,125 +123,98 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-slate-950"
+      className="flex-1 bg-white"
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
-        className="px-6 py-12 justify-center"
+        className="p-6 justify-center max-w-md w-full self-center"
       >
-        {/* Application header */}
-        <View className="items-center mb-8">
-          <View className="w-20 h-20 bg-orange-500/20 border-2 border-orange-500 rounded-3xl items-center justify-center mb-4">
-            <FontAwesome5 name="motorcycle" size={38} color="#F97316" />
-          </View>
-          <Text className="text-3xl font-extrabold text-white tracking-wider">
-            Mo<Text className="text-orange-500">Tourista</Text>
+        {/* Title */}
+        <View className="mb-6">
+          <Text className="text-2xl font-bold text-black mb-1">
+            MoTourista
           </Text>
-          <Text className="text-slate-400 text-sm mt-1 font-medium text-center">
-            Philippine Motorcycle Adventure & Hotspot Hub
+          <Text className="text-sm text-neutral-600">
+            {isSignUp ? 'Create an account' : 'Sign in to continue'}
           </Text>
         </View>
 
-        {/* External login buttons */}
-        <View className="space-y-3 mb-6">
-          {/* Google login button */}
+        {/* OAuth Buttons */}
+        <View className="mb-6">
           <TouchableOpacity
             onPress={() => handleOAuthLogin('google')}
             disabled={loading}
-            activeOpacity={0.8}
-            className="flex-row items-center justify-center bg-white py-3.5 px-4 rounded-xl shadow-sm mb-3"
+            className="border border-neutral-300 p-3 rounded mb-2 items-center"
           >
-            <Ionicons name="logo-google" size={20} color="#EA4335" />
-            <Text className="text-slate-900 font-bold text-base ml-3">
+            <Text className="text-black font-medium">
               Continue with Google
             </Text>
           </TouchableOpacity>
 
-          {/* Facebook login button */}
           <TouchableOpacity
             onPress={() => handleOAuthLogin('facebook')}
             disabled={loading}
-            activeOpacity={0.8}
-            className="flex-row items-center justify-center bg-[#1877F2] py-3.5 px-4 rounded-xl shadow-sm"
+            className="border border-neutral-300 p-3 rounded items-center"
           >
-            <Ionicons name="logo-facebook" size={22} color="#FFFFFF" />
-            <Text className="text-white font-bold text-base ml-3">
+            <Text className="text-black font-medium">
               Continue with Facebook
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Form divider */}
-        <View className="flex-row items-center my-6">
-          <View className="flex-1 h-[1px] bg-slate-800" />
-          <Text className="text-slate-500 text-xs font-semibold px-3 uppercase tracking-wider">
-            or email login
+        {/* Divider */}
+        <View className="border-b border-neutral-200 mb-6" />
+
+        {/* Form */}
+        <View className="mb-4">
+          <Text className="text-xs text-neutral-600 mb-1">
+            Email
           </Text>
-          <View className="flex-1 h-[1px] bg-slate-800" />
-        </View>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="email@domain.com"
+            placeholderTextColor="#888"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            className="border border-neutral-300 p-3 rounded text-black mb-3"
+          />
 
-        {/* Email and password form */}
-        <View className="space-y-4">
-          <View className="mb-3">
-            <Text className="text-slate-300 text-xs font-semibold mb-1.5 uppercase">
-              Rider Email
-            </Text>
-            <View className="flex-row items-center bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-3">
-              <Ionicons name="mail-outline" size={18} color="#94A3B8" />
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="rider@motourista.ph"
-                placeholderTextColor="#64748B"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                className="flex-1 text-white ml-2.5 text-base"
-              />
-            </View>
-          </View>
-
-          <View className="mb-5">
-            <Text className="text-slate-300 text-xs font-semibold mb-1.5 uppercase">
-              Password
-            </Text>
-            <View className="flex-row items-center bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-3">
-              <Ionicons name="lock-closed-outline" size={18} color="#94A3B8" />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor="#64748B"
-                secureTextEntry
-                className="flex-1 text-white ml-2.5 text-base"
-              />
-            </View>
-          </View>
+          <Text className="text-xs text-neutral-600 mb-1">
+            Password
+          </Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor="#888"
+            secureTextEntry
+            className="border border-neutral-300 p-3 rounded text-black mb-4"
+          />
 
           <TouchableOpacity
             onPress={handleEmailAuth}
             disabled={loading}
-            activeOpacity={0.8}
-            className="bg-orange-500 py-3.5 rounded-xl items-center justify-center shadow-lg shadow-orange-500/20"
+            className="bg-black p-3 rounded items-center justify-center mb-3"
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color="#fff" />
             ) : (
-              <Text className="text-white font-bold text-base">
-                {isSignUp ? 'Create Rider Account' : 'Sign In'}
+              <Text className="text-white font-medium">
+                {isSignUp ? 'Sign Up' : 'Sign In'}
               </Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => setIsSignUp(!isSignUp)}
-            className="items-center py-2 mt-2"
+            className="items-center p-2"
           >
-            <Text className="text-slate-400 text-sm">
-              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-              <Text className="text-orange-400 font-bold">
-                {isSignUp ? 'Sign In' : 'Sign Up'}
-              </Text>
+            <Text className="text-neutral-700 text-sm">
+              {isSignUp
+                ? 'Already have an account? Sign In'
+                : "Don't have an account? Sign Up"}
             </Text>
           </TouchableOpacity>
         </View>
