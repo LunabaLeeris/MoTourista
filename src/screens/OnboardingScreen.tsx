@@ -28,8 +28,10 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
   const [longitude, setLongitude] = useState<number | null>(null);
   const [driverTypes, setDriverTypes] = useState<DriverTypeRow[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeRow[]>([]);
-  const [selectedDriverTypeId, setSelectedDriverTypeId] = useState<string | null>(null);
-  const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState<string | null>(null);
+  const [selectedDriverTypeId, setSelectedDriverTypeId] = useState<string>('');
+  const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState<string>('');
+  const [isDriverDropdownOpen, setIsDriverDropdownOpen] = useState(false);
+  const [isVehicleDropdownOpen, setIsVehicleDropdownOpen] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -44,10 +46,14 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       setFetchingOptions(true);
 
       // Fetch driver types from the database.
-      const { data: dTypes } = await supabase
+      const { data: dTypes, error: dError } = await supabase
         .from('driver_types')
         .select('*')
         .order('display_order', { ascending: true });
+
+      if (dError) {
+        console.error('Error fetching driver types:', dError);
+      }
 
       if (dTypes && dTypes.length > 0) {
         setDriverTypes(dTypes);
@@ -55,10 +61,14 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       }
 
       // Fetch vehicle types from the database.
-      const { data: vTypes } = await supabase
+      const { data: vTypes, error: vError } = await supabase
         .from('vehicle_types')
         .select('*')
         .order('display_order', { ascending: true });
+
+      if (vError) {
+        console.error('Error fetching vehicle types:', vError);
+      }
 
       if (vTypes && vTypes.length > 0) {
         setVehicleTypes(vTypes);
@@ -66,13 +76,13 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       }
 
       // Load existing rider profile if available.
-      const { data: profile } = await supabase
+      const { data: profile, error: pError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (profile) {
+      if (profile && !pError) {
         if (profile.full_name) setFullName(profile.full_name);
         if (profile.avatar_url) setAvatarUri(profile.avatar_url);
         if (profile.location_name) setLocationName(profile.location_name);
@@ -81,8 +91,8 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         if (profile.driver_type_id) setSelectedDriverTypeId(profile.driver_type_id);
         if (profile.vehicle_type_id) setSelectedVehicleTypeId(profile.vehicle_type_id);
       }
-    } catch {
-      // The function ignores errors during initial data load.
+    } catch (err: any) {
+      console.error('Initial load error:', err);
     } finally {
       setFetchingOptions(false);
     }
@@ -177,8 +187,8 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         location_name: locationName.trim() || 'Philippines',
         latitude: latitude,
         longitude: longitude,
-        driver_type_id: selectedDriverTypeId,
-        vehicle_type_id: selectedVehicleTypeId,
+        driver_type_id: selectedDriverTypeId || null,
+        vehicle_type_id: selectedVehicleTypeId || null,
         is_onboarded: true,
         updated_at: new Date().toISOString(),
       });
@@ -193,12 +203,15 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
     }
   };
 
+  const currentDriverType = driverTypes.find((d) => d.id === selectedDriverTypeId);
+  const currentVehicleType = vehicleTypes.find((v) => v.id === selectedVehicleTypeId);
+
   if (fetchingOptions) {
     return (
       <View className="flex-1 bg-white items-center justify-center p-6">
         <ActivityIndicator color="#000" />
         <Text className="text-sm text-neutral-600 mt-2">
-          Loading options...
+          Loading options from database...
         </Text>
       </View>
     );
@@ -286,66 +299,108 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
           </TouchableOpacity>
         </View>
 
-        {/* Driver Type selector */}
+        {/* Driver Type Dropdown */}
         <View className="mb-4">
           <Text className="text-xs font-medium text-neutral-700 mb-1">
             Driver Type
           </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {driverTypes.map((type) => {
-              const isSelected = selectedDriverTypeId === type.id;
-              return (
-                <TouchableOpacity
-                  key={type.id}
-                  onPress={() => setSelectedDriverTypeId(type.id)}
-                  className={`border p-2 rounded ${
-                    isSelected
-                      ? 'border-black bg-neutral-100'
-                      : 'border-neutral-300'
-                  }`}
-                >
-                  <Text
-                    className={`text-xs ${
-                      isSelected ? 'font-bold text-black' : 'text-neutral-700'
+          <TouchableOpacity
+            onPress={() => {
+              setIsDriverDropdownOpen(!isDriverDropdownOpen);
+              setIsVehicleDropdownOpen(false);
+            }}
+            className="border border-neutral-300 p-3 rounded flex-row justify-between items-center"
+          >
+            <Text className="text-sm text-black">
+              {currentDriverType?.label || 'Select Driver Type'}
+            </Text>
+            <Text className="text-xs text-neutral-500">
+              {isDriverDropdownOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+          {isDriverDropdownOpen && (
+            <View className="border border-neutral-300 rounded mt-1 overflow-hidden">
+              {driverTypes.map((type) => {
+                const isSelected = selectedDriverTypeId === type.id;
+                return (
+                  <TouchableOpacity
+                    key={type.id}
+                    onPress={() => {
+                      setSelectedDriverTypeId(type.id);
+                      setIsDriverDropdownOpen(false);
+                    }}
+                    className={`p-3 border-b border-neutral-100 flex-row justify-between items-center ${
+                      isSelected ? 'bg-neutral-100' : 'bg-white'
                     }`}
                   >
-                    {type.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    <Text
+                      className={`text-sm ${
+                        isSelected ? 'font-bold text-black' : 'text-neutral-700'
+                      }`}
+                    >
+                      {type.label}
+                    </Text>
+                    {isSelected && (
+                      <Text className="text-xs font-bold text-black">✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
 
-        {/* Vehicle Type selector */}
+        {/* Vehicle Type Dropdown */}
         <View className="mb-6">
           <Text className="text-xs font-medium text-neutral-700 mb-1">
             Vehicle Type
           </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {vehicleTypes.map((v) => {
-              const isSelected = selectedVehicleTypeId === v.id;
-              return (
-                <TouchableOpacity
-                  key={v.id}
-                  onPress={() => setSelectedVehicleTypeId(v.id)}
-                  className={`border p-2 rounded ${
-                    isSelected
-                      ? 'border-black bg-neutral-100'
-                      : 'border-neutral-300'
-                  }`}
-                >
-                  <Text
-                    className={`text-xs ${
-                      isSelected ? 'font-bold text-black' : 'text-neutral-700'
+          <TouchableOpacity
+            onPress={() => {
+              setIsVehicleDropdownOpen(!isVehicleDropdownOpen);
+              setIsDriverDropdownOpen(false);
+            }}
+            className="border border-neutral-300 p-3 rounded flex-row justify-between items-center"
+          >
+            <Text className="text-sm text-black">
+              {currentVehicleType?.label || 'Select Vehicle Type'}
+            </Text>
+            <Text className="text-xs text-neutral-500">
+              {isVehicleDropdownOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+          {isVehicleDropdownOpen && (
+            <View className="border border-neutral-300 rounded mt-1 overflow-hidden">
+              {vehicleTypes.map((v) => {
+                const isSelected = selectedVehicleTypeId === v.id;
+                return (
+                  <TouchableOpacity
+                    key={v.id}
+                    onPress={() => {
+                      setSelectedVehicleTypeId(v.id);
+                      setIsVehicleDropdownOpen(false);
+                    }}
+                    className={`p-3 border-b border-neutral-100 flex-row justify-between items-center ${
+                      isSelected ? 'bg-neutral-100' : 'bg-white'
                     }`}
                   >
-                    {v.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    <Text
+                      className={`text-sm ${
+                        isSelected ? 'font-bold text-black' : 'text-neutral-700'
+                      }`}
+                    >
+                      {v.label}
+                    </Text>
+                    {isSelected && (
+                      <Text className="text-xs font-bold text-black">✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Submit Button */}
