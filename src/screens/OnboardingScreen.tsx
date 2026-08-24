@@ -143,24 +143,50 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       setLatitude(lat);
       setLongitude(lng);
 
-      // Convert coordinates to a city and province name.
-      const geocode = await Location.reverseGeocodeAsync({
-        latitude: lat,
-        longitude: lng,
-      });
-
-      if (geocode && geocode.length > 0) {
-        const place = geocode[0];
-        const readableLocation = [
-          place.city || place.subregion || place.district,
-          place.region || place.country,
-        ]
-          .filter(Boolean)
-          .join(', ');
-
-        setLocationName(readableLocation || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      } else {
+      // Convert coordinates to a readable address based on platform.
+      if (Platform.OS === 'web') {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const address = data?.address;
+            const city =
+              address?.city ||
+              address?.town ||
+              address?.municipality ||
+              address?.county;
+            const region = address?.state || address?.region || address?.country;
+            const formatted = [city, region].filter(Boolean).join(', ');
+            setLocationName(formatted || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            return;
+          }
+        } catch {
+          // The function falls back to numeric coordinates if reverse geocoding fails.
+        }
         setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      } else {
+        const geocode = await Location.reverseGeocodeAsync({
+          latitude: lat,
+          longitude: lng,
+        });
+
+        if (geocode && geocode.length > 0) {
+          const place = geocode[0];
+          const readableLocation = [
+            place.city || place.subregion || place.district,
+            place.region || place.country,
+          ]
+            .filter(Boolean)
+            .join(', ');
+
+          setLocationName(
+            readableLocation || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+          );
+        } else {
+          setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
       }
     } catch (err: any) {
       Alert.alert('Location Error', `Could not get GPS location: ${err.message}`);
