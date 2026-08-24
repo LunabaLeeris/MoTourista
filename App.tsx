@@ -49,7 +49,7 @@ export default function App() {
         .from('profiles')
         .select('is_onboarded')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (data && !error) {
         setIsOnboarded(Boolean(data.is_onboarded));

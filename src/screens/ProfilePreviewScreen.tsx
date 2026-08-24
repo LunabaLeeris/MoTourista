@@ -35,7 +35,7 @@ export default function ProfilePreviewScreen({
         .from('profiles')
         .select('*, driver_types (*), vehicle_types (*)')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setProfile(data as ProfileWithDetails);

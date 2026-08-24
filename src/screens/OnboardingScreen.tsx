@@ -80,7 +80,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (profile && !pError) {
         if (profile.full_name) setFullName(profile.full_name);
