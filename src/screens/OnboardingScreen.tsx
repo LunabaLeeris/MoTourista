@@ -180,18 +180,21 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       setLoading(true);
 
       // Update the profile table in the database.
-      const { error } = await supabase.from('profiles').upsert({
-        id: userId,
-        full_name: fullName.trim(),
-        avatar_url: avatarUri,
-        location_name: locationName.trim() || 'Philippines',
-        latitude: latitude,
-        longitude: longitude,
-        driver_type_id: selectedDriverTypeId || null,
-        vehicle_type_id: selectedVehicleTypeId || null,
-        is_onboarded: true,
-        updated_at: new Date().toISOString(),
-      });
+      const { error } = await supabase.from('profiles').upsert(
+        {
+          id: userId,
+          full_name: fullName.trim(),
+          avatar_url: avatarUri,
+          location_name: locationName.trim() || 'Philippines',
+          latitude: latitude,
+          longitude: longitude,
+          driver_type_id: selectedDriverTypeId || null,
+          vehicle_type_id: selectedVehicleTypeId || null,
+          is_onboarded: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
 
       if (error) throw error;
 
@@ -227,14 +230,22 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         keyboardShouldPersistTaps="handled"
         className="p-6 max-w-md w-full self-center"
       >
-        {/* Title */}
-        <View className="mb-6">
-          <Text className="text-xl font-bold text-black mb-1">
-            Rider Profile Setup
-          </Text>
-          <Text className="text-xs text-neutral-600">
-            Fill in your rider details below.
-          </Text>
+        {/* Title and Sign Out */}
+        <View className="flex-row items-center justify-between mb-6 pb-3 border-b border-neutral-200">
+          <View>
+            <Text className="text-xl font-bold text-black mb-1">
+              Rider Profile Setup
+            </Text>
+            <Text className="text-xs text-neutral-600">
+              Fill in your rider details below.
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => supabase.auth.signOut()}
+            className="border border-neutral-300 px-3 py-1.5 rounded"
+          >
+            <Text className="text-xs text-black">Sign Out</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Photo selection */}

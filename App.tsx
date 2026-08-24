@@ -16,13 +16,21 @@ export default function App() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   useEffect(() => {
-    // Get the active user session on startup.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        checkOnboardingStatus(session.user.id);
-      } else {
+    // Validate the active session with the database.
+    supabase.auth.getUser().then(({ data: { user }, error }) => {
+      if (error || !user) {
+        supabase.auth.signOut();
+        setSession(null);
         setLoading(false);
+      } else {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setSession(session);
+          if (session) {
+            checkOnboardingStatus(session.user.id);
+          } else {
+            setLoading(false);
+          }
+        });
       }
     });
 
