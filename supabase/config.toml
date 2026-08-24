@@ -1,5 +1,4 @@
-# A string used to distinguish different Supabase projects on the same host. Defaults to the
-# working directory name when running `supabase init`.
+# A string used to distinguish different Supabase projects on the same host.
 project_id = "motourista"
 
 [api]
@@ -26,18 +25,27 @@ enabled = true
 port = 54323
 api_role = "anon"
 
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["https://127.0.0.1:3000", "exp://*"]
+additional_redirect_urls = ["https://127.0.0.1:3000", "exp://*", "motourista://*"]
 jwt_expiry = 3600
 enable_signup = true
 
 [auth.email]
 enable_signup = true
-double_confirm_changes = true
+double_confirm_changes = false
 enable_confirmations = false
 
-[storage]
-enabled = true
-file_size_limit = "50MiB"
+[analytics]
+enabled = false
+port = 54347
+vector_port = 54348

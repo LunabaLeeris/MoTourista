@@ -1,0 +1,2 @@
+-- MoTourista Seed Data
+-- Initial categories or sample records will be placed here
