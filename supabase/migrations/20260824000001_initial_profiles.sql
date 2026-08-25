@@ -51,10 +51,10 @@ create table if not exists public.profiles (
 -- Enable row level security on the profiles table.
 alter table public.profiles enable row level security;
 
--- Grant table access permissions to anon and authenticated roles.
-grant select on table public.driver_types to anon, authenticated;
-grant select on table public.vehicle_types to anon, authenticated;
-grant all on table public.profiles to anon, authenticated;
+-- Grant table access permissions to anon, authenticated, and service_role.
+grant select on table public.driver_types to anon, authenticated, service_role;
+grant select on table public.vehicle_types to anon, authenticated, service_role;
+grant all on table public.profiles to anon, authenticated, service_role;
 
 -- Define access policies for the profiles table.
 drop policy if exists "Profiles are viewable by authenticated users" on public.profiles;
