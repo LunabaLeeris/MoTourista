@@ -5,6 +5,7 @@ export type { Database, Tables, TablesInsert, TablesUpdate };
 // Type aliases for lookup tables.
 export type DriverTypeRow = Tables<'driver_types'>;
 export type VehicleTypeRow = Tables<'vehicle_types'>;
+export type MotorcycleModelRow = Tables<'motorcycle_models'>;
 export type LocationStatusRow = Tables<'location_statuses'>;
 export type TagRow = Tables<'tags'>;
 export type BadgeRow = Tables<'badges'>;
@@ -24,6 +25,7 @@ export type ReviewImageRow = Tables<'review_images'>;
 export interface ProfileWithDetails extends ProfileRow {
   driver_types?: DriverTypeRow | null;
   vehicle_types?: VehicleTypeRow | null;
+  motorcycle_models?: MotorcycleModelRow | null;
   user_badges?: (UserBadgeRow & { badges?: BadgeRow | null })[];
 }
 

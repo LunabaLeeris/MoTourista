@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
-import { DriverTypeRow, VehicleTypeRow } from '../types/database';
+import { DriverTypeRow, VehicleTypeRow, MotorcycleModelRow } from '../types/database';
 import { getCurrentRiderLocation } from '../services/locationService';
 
 export default function OnboardingScreen() {
@@ -31,10 +31,13 @@ export default function OnboardingScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [driverTypes, setDriverTypes] = useState<DriverTypeRow[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeRow[]>([]);
+  const [motorcycleModels, setMotorcycleModels] = useState<MotorcycleModelRow[]>([]);
   const [selectedDriverTypeId, setSelectedDriverTypeId] = useState<string>('');
   const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState<string>('');
+  const [selectedMotorcycleModelId, setSelectedMotorcycleModelId] = useState<string>('');
   const [isDriverDropdownOpen, setIsDriverDropdownOpen] = useState(false);
   const [isVehicleDropdownOpen, setIsVehicleDropdownOpen] = useState(false);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -78,6 +81,20 @@ export default function OnboardingScreen() {
         setSelectedVehicleTypeId(vTypes[0].id);
       }
 
+      // Fetch motorcycle models from the database.
+      const { data: mModels, error: mError } = await supabase
+        .from('motorcycle_models')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (mError) {
+        console.error('Error fetching motorcycle models:', mError);
+      }
+
+      if (mModels && mModels.length > 0) {
+        setMotorcycleModels(mModels);
+      }
+
       // Load existing rider profile if available.
       const { data: profile, error: pError } = await supabase
         .from('profiles')
@@ -93,6 +110,7 @@ export default function OnboardingScreen() {
         if (profile.longitude) setLongitude(profile.longitude);
         if (profile.driver_type_id) setSelectedDriverTypeId(profile.driver_type_id);
         if (profile.vehicle_type_id) setSelectedVehicleTypeId(profile.vehicle_type_id);
+        if (profile.motorcycle_model_id) setSelectedMotorcycleModelId(profile.motorcycle_model_id);
       }
     } catch (err: any) {
       console.error('Initial load error:', err);
@@ -161,6 +179,7 @@ export default function OnboardingScreen() {
           longitude: longitude,
           driver_type_id: selectedDriverTypeId || null,
           vehicle_type_id: selectedVehicleTypeId || null,
+          motorcycle_model_id: selectedMotorcycleModelId || null,
           is_onboarded: true,
           updated_at: new Date().toISOString(),
         },
@@ -180,8 +199,23 @@ export default function OnboardingScreen() {
     }
   };
 
+  const handleSelectVehicleType = (typeId: string) => {
+    setSelectedVehicleTypeId(typeId);
+    setIsVehicleDropdownOpen(false);
+    const matching = motorcycleModels.filter((m) => m.vehicle_type_id === typeId);
+    if (!matching.some((m) => m.id === selectedMotorcycleModelId)) {
+      setSelectedMotorcycleModelId(matching[0]?.id || '');
+    }
+  };
+
+  const availableModels = useMemo(() => {
+    if (!selectedVehicleTypeId) return [];
+    return motorcycleModels.filter((m) => m.vehicle_type_id === selectedVehicleTypeId);
+  }, [selectedVehicleTypeId, motorcycleModels]);
+
   const currentDriverType = driverTypes.find((d) => d.id === selectedDriverTypeId);
   const currentVehicleType = vehicleTypes.find((v) => v.id === selectedVehicleTypeId);
+  const currentMotorcycleModel = motorcycleModels.find((m) => m.id === selectedMotorcycleModelId);
 
   if (fetchingOptions) {
     return (
@@ -303,6 +337,7 @@ export default function OnboardingScreen() {
             onPress={() => {
               setIsDriverDropdownOpen(!isDriverDropdownOpen);
               setIsVehicleDropdownOpen(false);
+              setIsModelDropdownOpen(false);
             }}
             className="border border-neutral-300 p-3 rounded flex-row justify-between items-center"
           >
@@ -325,14 +360,12 @@ export default function OnboardingScreen() {
                       setSelectedDriverTypeId(type.id);
                       setIsDriverDropdownOpen(false);
                     }}
-                    className={`p-3 border-b border-neutral-100 flex-row justify-between items-center ${
-                      isSelected ? 'bg-neutral-100' : 'bg-white'
-                    }`}
+                    className={`p-3 border-b border-neutral-100 flex-row justify-between items-center ${isSelected ? 'bg-neutral-100' : 'bg-white'
+                      }`}
                   >
                     <Text
-                      className={`text-sm ${
-                        isSelected ? 'font-bold text-black' : 'text-neutral-700'
-                      }`}
+                      className={`text-sm ${isSelected ? 'font-bold text-black' : 'text-neutral-700'
+                        }`}
                     >
                       {type.label}
                     </Text>
@@ -347,7 +380,7 @@ export default function OnboardingScreen() {
         </View>
 
         {/* Vehicle Type Dropdown */}
-        <View className="mb-6">
+        <View className="mb-4">
           <Text className="text-xs font-medium text-neutral-700 mb-1">
             Vehicle Type
           </Text>
@@ -355,6 +388,7 @@ export default function OnboardingScreen() {
             onPress={() => {
               setIsVehicleDropdownOpen(!isVehicleDropdownOpen);
               setIsDriverDropdownOpen(false);
+              setIsModelDropdownOpen(false);
             }}
             className="border border-neutral-300 p-3 rounded flex-row justify-between items-center"
           >
@@ -373,20 +407,73 @@ export default function OnboardingScreen() {
                 return (
                   <TouchableOpacity
                     key={v.id}
-                    onPress={() => {
-                      setSelectedVehicleTypeId(v.id);
-                      setIsVehicleDropdownOpen(false);
-                    }}
-                    className={`p-3 border-b border-neutral-100 flex-row justify-between items-center ${
-                      isSelected ? 'bg-neutral-100' : 'bg-white'
-                    }`}
+                    onPress={() => handleSelectVehicleType(v.id)}
+                    className={`p-3 border-b border-neutral-100 flex-row justify-between items-center ${isSelected ? 'bg-neutral-100' : 'bg-white'
+                      }`}
                   >
                     <Text
-                      className={`text-sm ${
-                        isSelected ? 'font-bold text-black' : 'text-neutral-700'
-                      }`}
+                      className={`text-sm ${isSelected ? 'font-bold text-black' : 'text-neutral-700'
+                        }`}
                     >
                       {v.label}
+                    </Text>
+                    {isSelected && (
+                      <Text className="text-xs font-bold text-black">✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* Motorcycle Model Dropdown */}
+        <View className="mb-6">
+          <Text className="text-xs font-medium text-neutral-700 mb-1">
+            Motorcycle Model
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (availableModels.length > 0) {
+                setIsModelDropdownOpen(!isModelDropdownOpen);
+                setIsDriverDropdownOpen(false);
+                setIsVehicleDropdownOpen(false);
+              }
+            }}
+            disabled={availableModels.length === 0}
+            className={`border border-neutral-300 p-3 rounded flex-row justify-between items-center ${availableModels.length === 0 ? 'bg-neutral-50 opacity-60' : 'bg-white'
+              }`}
+          >
+            <Text className="text-sm text-black">
+              {currentMotorcycleModel?.label ||
+                (availableModels.length === 0
+                  ? 'Select vehicle type first'
+                  : 'Select Motorcycle Model')}
+            </Text>
+            <Text className="text-xs text-neutral-500">
+              {isModelDropdownOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+          {isModelDropdownOpen && availableModels.length > 0 && (
+            <View className="border border-neutral-300 rounded mt-1 overflow-hidden">
+              {availableModels.map((m) => {
+                const isSelected = selectedMotorcycleModelId === m.id;
+                return (
+                  <TouchableOpacity
+                    key={m.id}
+                    onPress={() => {
+                      setSelectedMotorcycleModelId(m.id);
+                      setIsModelDropdownOpen(false);
+                    }}
+                    className={`p-3 border-b border-neutral-100 flex-row justify-between items-center ${isSelected ? 'bg-neutral-100' : 'bg-white'
+                      }`}
+                  >
+                    <Text
+                      className={`text-sm ${isSelected ? 'font-bold text-black' : 'text-neutral-700'
+                        }`}
+                    >
+                      {m.label}
                     </Text>
                     {isSelected && (
                       <Text className="text-xs font-bold text-black">✓</Text>

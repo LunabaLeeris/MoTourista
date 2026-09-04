@@ -28,6 +28,64 @@ on conflict (id) do update set
   icon = excluded.icon,
   display_order = excluded.display_order;
 
+-- Insert initial popular Philippine motorcycle models.
+insert into public.motorcycle_models (id, vehicle_type_id, label, icon, display_order)
+values
+  -- Scooter
+  ('yamaha_nmax_155', 'scooter', 'Yamaha NMAX 155', 'moped', 10),
+  ('yamaha_aerox_155', 'scooter', 'Yamaha Aerox 155', 'moped', 20),
+  ('honda_click_125i', 'scooter', 'Honda Click 125i', 'moped', 30),
+  ('honda_click_160', 'scooter', 'Honda Click 160', 'moped', 40),
+  ('honda_pcx_160', 'scooter', 'Honda PCX 160', 'moped', 50),
+  ('honda_beat_110', 'scooter', 'Honda Beat 110', 'moped', 60),
+  ('yamaha_mio_fazzio', 'scooter', 'Yamaha Mio Fazzio 125', 'moped', 70),
+  ('suzuki_burgman_125', 'scooter', 'Suzuki Burgman Street 125', 'moped', 80),
+
+  -- Underbone
+  ('suzuki_raider_150', 'underbone', 'Suzuki Raider R150 Fi', 'motorbike', 10),
+  ('yamaha_sniper_155', 'underbone', 'Yamaha Sniper 155', 'motorbike', 20),
+  ('honda_wave_rsx', 'underbone', 'Honda Wave RSX 110', 'motorbike', 30),
+  ('honda_winner_x', 'underbone', 'Honda Winner X 150', 'motorbike', 40),
+
+  -- Backbone / Manual
+  ('honda_tmx_125', 'backbone_manual', 'Honda TMX 125 Alpha', 'motorcycle', 10),
+  ('kawasaki_barako_175', 'backbone_manual', 'Kawasaki Barako II 175', 'motorcycle', 20),
+  ('yamaha_ytx_125', 'backbone_manual', 'Yamaha YTX 125', 'motorcycle', 30),
+  ('yamaha_mt_15', 'backbone_manual', 'Yamaha MT-15', 'motorcycle', 40),
+  ('honda_cb150x', 'backbone_manual', 'Honda CB150X', 'motorcycle', 50),
+
+  -- Maxi Scooter
+  ('yamaha_tmax_560', 'maxi_scooter', 'Yamaha TMAX 560', 'moped', 10),
+  ('kymco_ak550', 'maxi_scooter', 'Kymco AK550', 'moped', 20),
+  ('sym_maxsym_400', 'maxi_scooter', 'SYM Maxsym 400', 'moped', 30),
+  ('honda_x_adv_750', 'maxi_scooter', 'Honda X-ADV 750', 'moped', 40),
+
+  -- Adventure
+  ('honda_adv_160', 'adventure', 'Honda ADV 160', 'compass-outline', 10),
+  ('honda_crf300l', 'adventure', 'Honda CRF300L', 'compass-outline', 20),
+  ('kawasaki_versys_650', 'adventure', 'Kawasaki Versys 650', 'compass-outline', 30),
+  ('ktm_390_adventure', 'adventure', 'KTM 390 Adventure', 'compass-outline', 40),
+  ('bmw_r1250_gs', 'adventure', 'BMW R 1250 GS', 'compass-outline', 50),
+
+  -- Sportbike
+  ('kawasaki_ninja_400', 'sportbike', 'Kawasaki Ninja 400', 'speedometer', 10),
+  ('yamaha_yzf_r3', 'sportbike', 'Yamaha YZF-R3', 'speedometer', 20),
+  ('cfmoto_450sr', 'sportbike', 'CFMOTO 450SR', 'speedometer', 30),
+  ('honda_cbr500r', 'sportbike', 'Honda CBR500R', 'speedometer', 40),
+
+  -- Cruiser
+  ('honda_rebel_500', 'cruiser', 'Honda Rebel 500', 'car-cruise-control', 10),
+  ('royal_enfield_classic_350', 'cruiser', 'Royal Enfield Classic 350', 'car-cruise-control', 20),
+  ('kawasaki_vulcan_s', 'cruiser', 'Kawasaki Vulcan S', 'car-cruise-control', 30),
+
+  -- Other
+  ('other_model', 'other', 'Custom / Other Model', 'dots-horizontal-circle-outline', 10)
+on conflict (id) do update set
+  vehicle_type_id = excluded.vehicle_type_id,
+  label = excluded.label,
+  icon = excluded.icon,
+  display_order = excluded.display_order;
+
 -- Insert initial location verification statuses.
 insert into public.location_statuses (id, label, description, display_order)
 values

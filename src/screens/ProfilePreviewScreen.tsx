@@ -41,7 +41,7 @@ export default function ProfilePreviewScreen() {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, driver_types (*), vehicle_types (*)')
+        .select('*, driver_types (*), vehicle_types (*), motorcycle_models (*)')
         .eq('id', effectiveUserId)
         .maybeSingle();
 
@@ -87,6 +87,7 @@ export default function ProfilePreviewScreen() {
 
   const driverLabel = profile?.driver_types?.label || 'None';
   const vehicleLabel = profile?.vehicle_types?.label || 'Not specified';
+  const motorcycleModelLabel = profile?.motorcycle_models?.label || 'Not specified';
   const unlockedCount = badges.filter((b) => b.is_unlocked).length;
 
   return (
@@ -134,6 +135,11 @@ export default function ProfilePreviewScreen() {
         <View className="flex-row justify-between py-2 border-b border-neutral-100">
           <Text className="text-xs text-neutral-500">Vehicle Type</Text>
           <Text className="text-xs font-medium text-black">{vehicleLabel}</Text>
+        </View>
+
+        <View className="flex-row justify-between py-2 border-b border-neutral-100">
+          <Text className="text-xs text-neutral-500">Motorcycle Model</Text>
+          <Text className="text-xs font-medium text-black">{motorcycleModelLabel}</Text>
         </View>
 
         <View className="flex-row justify-between py-2">
