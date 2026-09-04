@@ -20,15 +20,10 @@ import { RootStackParamList } from '../types/navigation';
 import { DriverTypeRow, VehicleTypeRow } from '../types/database';
 import { getCurrentRiderLocation } from '../services/locationService';
 
-interface OnboardingScreenProps {
-  userId?: string;
-  onCompleted?: () => void;
-}
-
-export default function OnboardingScreen({ userId, onCompleted }: OnboardingScreenProps = {}) {
+export default function OnboardingScreen() {
   const { user, signOut, refreshOnboardingStatus } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const effectiveUserId = userId || user?.id || '';
+  const effectiveUserId = user?.id || '';
 
   const [fullName, setFullName] = useState('');
   const [locationName, setLocationName] = useState('');
@@ -175,9 +170,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       if (error) throw error;
 
       await refreshOnboardingStatus();
-      if (onCompleted) {
-        onCompleted();
-      } else if (navigation.canGoBack()) {
+      if (navigation.canGoBack()) {
         navigation.goBack();
       }
     } catch (err: any) {

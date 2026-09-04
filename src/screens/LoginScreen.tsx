@@ -16,18 +16,16 @@ import { supabase } from '../lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
-interface LoginScreenProps {
-  onLoginSuccess?: () => void;
-}
+type OAuthProviders = 'google' | 'facebook';
 
-export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Authenticate the user with Google or Facebook.
-  const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
+  const handleOAuthLogin = async (provider: OAuthProviders) => {
     try {
       setLoading(true);
       const redirectUrl = makeRedirectUri({
@@ -62,7 +60,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               access_token: accessToken,
               refresh_token: refreshToken,
             });
-            onLoginSuccess?.();
           }
         }
       }
@@ -96,9 +93,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           },
         });
         if (error) throw error;
-        if (data.session) {
-          onLoginSuccess?.();
-        } else {
+        if (!data.session) {
           Alert.alert(
             'Account Created',
             'Signed up successfully. You can now log in.'
@@ -111,7 +106,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           password: password,
         });
         if (error) throw error;
-        onLoginSuccess?.();
       }
     } catch (err: any) {
       Alert.alert('Authentication Error', err.message || 'Failed to authenticate');

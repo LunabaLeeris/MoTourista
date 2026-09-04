@@ -18,20 +18,10 @@ import { RootStackParamList } from '../types/navigation';
 import { ProfileWithDetails, BadgeWithProgress } from '../types/database';
 import { fetchBadgesWithProgress } from '../services/badgeService';
 
-interface ProfilePreviewScreenProps {
-  userId?: string;
-  onEditProfile?: () => void;
-  onSignOut?: () => void;
-}
-
-export default function ProfilePreviewScreen({
-  userId,
-  onEditProfile,
-  onSignOut,
-}: ProfilePreviewScreenProps = {}) {
+export default function ProfilePreviewScreen() {
   const { user, signOut } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const effectiveUserId = userId || user?.id || '';
+  const effectiveUserId = user?.id || '';
 
   const [profile, setProfile] = useState<ProfileWithDetails | null>(null);
   const [badges, setBadges] = useState<BadgeWithProgress[]>([]);
@@ -77,19 +67,11 @@ export default function ProfilePreviewScreen({
   };
 
   const handleSignOut = async () => {
-    if (onSignOut) {
-      onSignOut();
-    } else {
-      await signOut();
-    }
+    await signOut();
   };
 
   const handleEditProfile = () => {
-    if (onEditProfile) {
-      onEditProfile();
-    } else {
-      navigation.navigate('EditProfile');
-    }
+    navigation.navigate('EditProfile');
   };
 
   if (loading) {
