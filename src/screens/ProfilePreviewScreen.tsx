@@ -10,21 +10,29 @@ import {
   Pressable,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import { RootStackParamList } from '../types/navigation';
 import { ProfileWithDetails, BadgeWithProgress } from '../types/database';
 import { fetchBadgesWithProgress } from '../services/badgeService';
 
 interface ProfilePreviewScreenProps {
-  userId: string;
-  onEditProfile: () => void;
-  onSignOut: () => void;
+  userId?: string;
+  onEditProfile?: () => void;
+  onSignOut?: () => void;
 }
 
 export default function ProfilePreviewScreen({
   userId,
   onEditProfile,
   onSignOut,
-}: ProfilePreviewScreenProps) {
+}: ProfilePreviewScreenProps = {}) {
+  const { user, signOut } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const effectiveUserId = userId || user?.id || '';
+
   const [profile, setProfile] = useState<ProfileWithDetails | null>(null);
   const [badges, setBadges] = useState<BadgeWithProgress[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<BadgeWithProgress | null>(null);
@@ -32,9 +40,11 @@ export default function ProfilePreviewScreen({
   const [loadingBadges, setLoadingBadges] = useState(true);
 
   useEffect(() => {
-    fetchProfile();
-    loadBadges();
-  }, [userId]);
+    if (effectiveUserId) {
+      fetchProfile();
+      loadBadges();
+    }
+  }, [effectiveUserId]);
 
   const fetchProfile = async () => {
     try {
@@ -42,7 +52,7 @@ export default function ProfilePreviewScreen({
       const { data, error } = await supabase
         .from('profiles')
         .select('*, driver_types (*), vehicle_types (*)')
-        .eq('id', userId)
+        .eq('id', effectiveUserId)
         .maybeSingle();
 
       if (error) throw error;
@@ -57,7 +67,7 @@ export default function ProfilePreviewScreen({
   const loadBadges = async () => {
     try {
       setLoadingBadges(true);
-      const userBadges = await fetchBadgesWithProgress(userId);
+      const userBadges = await fetchBadgesWithProgress(effectiveUserId);
       setBadges(userBadges);
     } catch {
       // The function ignores errors during badge retrieval.
@@ -67,8 +77,19 @@ export default function ProfilePreviewScreen({
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    onSignOut();
+    if (onSignOut) {
+      onSignOut();
+    } else {
+      await signOut();
+    }
+  };
+
+  const handleEditProfile = () => {
+    if (onEditProfile) {
+      onEditProfile();
+    } else {
+      navigation.navigate('EditProfile');
+    }
   };
 
   if (loading) {
@@ -215,7 +236,7 @@ export default function ProfilePreviewScreen({
 
       {/* Action Button */}
       <TouchableOpacity
-        onPress={onEditProfile}
+        onPress={handleEditProfile}
         className="border border-black p-3 rounded items-center justify-center mb-8"
       >
         <Text className="text-sm font-medium text-black">

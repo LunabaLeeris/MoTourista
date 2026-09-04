@@ -12,16 +12,24 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import { RootStackParamList } from '../types/navigation';
 import { DriverTypeRow, VehicleTypeRow } from '../types/database';
 import { getCurrentRiderLocation } from '../services/locationService';
 
 interface OnboardingScreenProps {
-  userId: string;
-  onCompleted: () => void;
+  userId?: string;
+  onCompleted?: () => void;
 }
 
-export default function OnboardingScreen({ userId, onCompleted }: OnboardingScreenProps) {
+export default function OnboardingScreen({ userId, onCompleted }: OnboardingScreenProps = {}) {
+  const { user, signOut, refreshOnboardingStatus } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const effectiveUserId = userId || user?.id || '';
+
   const [fullName, setFullName] = useState('');
   const [locationName, setLocationName] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -79,7 +87,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       const { data: profile, error: pError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', effectiveUserId)
         .maybeSingle();
 
       if (profile && !pError) {
@@ -150,7 +158,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
       // Update the profile table in the database.
       const { error } = await supabase.from('profiles').upsert(
         {
-          id: userId,
+          id: effectiveUserId,
           full_name: fullName.trim(),
           avatar_url: avatarUri,
           location_name: locationName.trim() || 'Philippines',
@@ -166,7 +174,12 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
 
       if (error) throw error;
 
-      onCompleted();
+      await refreshOnboardingStatus();
+      if (onCompleted) {
+        onCompleted();
+      } else if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (err: any) {
       Alert.alert('Save Error', err.message || 'Failed to save information.');
     } finally {
@@ -198,7 +211,7 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
         keyboardShouldPersistTaps="handled"
         className="p-6 max-w-md w-full self-center"
       >
-        {/* Title and Sign Out */}
+        {/* Title and Action Buttons */}
         <View className="flex-row items-center justify-between mb-6 pb-3 border-b border-neutral-200">
           <View>
             <Text className="text-xl font-bold text-black mb-1">
@@ -208,12 +221,22 @@ export default function OnboardingScreen({ userId, onCompleted }: OnboardingScre
               Fill in your rider details below.
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => supabase.auth.signOut()}
-            className="border border-neutral-300 px-3 py-1.5 rounded"
-          >
-            <Text className="text-xs text-black">Sign Out</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center">
+            {navigation.canGoBack() && (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                className="border border-neutral-300 px-3 py-1.5 rounded mr-2"
+              >
+                <Text className="text-xs text-black">Back</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => signOut()}
+              className="border border-neutral-300 px-3 py-1.5 rounded"
+            >
+              <Text className="text-xs text-black">Sign Out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Photo selection */}

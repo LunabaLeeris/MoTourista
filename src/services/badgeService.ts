@@ -11,7 +11,7 @@ export async function fetchBadgesWithProgress(
   userId: string
 ): Promise<BadgeWithProgress[]> {
   try {
-    // 1. Fetch all badges ordered by display order.
+    // Fetch all badges ordered by display order.
     const { data: badgesData, error: badgesError } = await supabase
       .from('badges')
       .select('*')
@@ -20,7 +20,7 @@ export async function fetchBadgesWithProgress(
     if (badgesError) throw badgesError;
     const badges: BadgeRow[] = badgesData || [];
 
-    // 2. Fetch user's unlocked badges.
+    // Fetch user's unlocked badges.
     const { data: userBadgesData, error: userBadgesError } = await supabase
       .from('user_badges')
       .select('*')
@@ -32,7 +32,7 @@ export async function fetchBadgesWithProgress(
       userBadges.map((ub) => [ub.badge_id, ub])
     );
 
-    // 3. Fetch user's visits.
+    // Fetch user's visits.
     const { data: visitsData, error: visitsError } = await supabase
       .from('location_visits')
       .select('location_id')
@@ -42,7 +42,7 @@ export async function fetchBadgesWithProgress(
     const visits = visitsData || [];
     const totalVisits = visits.length;
 
-    // 4. Map location IDs to their associated tags for tag-specific visit badges.
+    // Map location IDs to their associated tags for tag-specific visit badges.
     const locationIds = Array.from(
       new Set(visits.map((v) => v.location_id).filter(Boolean))
     );
@@ -64,7 +64,7 @@ export async function fetchBadgesWithProgress(
       }
     }
 
-    // 5. Calculate progress for each badge.
+    //  Calculate progress for each badge.
     const badgesWithProgress: BadgeWithProgress[] = badges.map((badge) => {
       const userBadge = userBadgesMap.get(badge.id);
       const isUnlocked = Boolean(userBadge);
