@@ -7,7 +7,7 @@ export type BadgeCriteriaTuple = [tagId: string, threshold: number];
 export interface BadgeProgressItem {
   tag_id: string;
   current: number;
-  target: number;
+  target?: number;
 }
 
 /**
@@ -55,6 +55,7 @@ export function calculateTotalTarget(tuples: BadgeCriteriaTuple[]): number {
 
 /**
  * Safely parses the stored progress_data JSON array from user_badge_progress.
+ * Only extracts tag_id and current visit counts.
  */
 export function parseProgressData(data: unknown): BadgeProgressItem[] {
   if (!Array.isArray(data)) return [];
@@ -65,9 +66,9 @@ export function parseProgressData(data: unknown): BadgeProgressItem[] {
       return {
         tag_id: String(raw.tag_id || '*'),
         current: Number(raw.current) || 0,
-        target: Math.max(1, Number(raw.target) || 1),
+        ...(raw.target !== undefined ? { target: Number(raw.target) } : {}),
       };
     }
-    return { tag_id: '*', current: 0, target: 1 };
+    return { tag_id: '*', current: 0 };
   });
 }

@@ -53,7 +53,13 @@ export async function fetchBadgesWithProgress(
         currentProgress = Math.max(currentProgress, targetProgress);
       }
 
-      const progressData = parseProgressData(progress?.progress_data);
+      // Resolve target for each criteria tag dynamically from badge.criteria_data
+      const criteriaMap = new Map<string, number>(tuples);
+      const progressData = parseProgressData(progress?.progress_data).map((item) => ({
+        tag_id: item.tag_id,
+        current: item.current,
+        target: criteriaMap.get(item.tag_id) ?? targetProgress,
+      }));
 
       return {
         ...badge,

@@ -14,6 +14,7 @@ export interface SimulatedVisitResult {
 }
 
 /**
+ * [NOTE] This is only used for testing. This should be removed eventually
  * Simulates visiting a location with the specified tags.
  * Bypasses manual location creation by creating a lightweight test location,
  * linking the selected tags, and recording the visit in location_visits.
@@ -34,7 +35,7 @@ export async function recordSimulatedVisit({
     second: '2-digit',
   });
 
-  // 1. Create lightweight test location
+  // Create lightweight test location
   const { data: locationData, error: locationError } = await supabase
     .from('locations')
     .insert({
@@ -53,7 +54,7 @@ export async function recordSimulatedVisit({
     throw new Error(locationError?.message || 'Failed to create simulated test location.');
   }
 
-  // 2. Attach selected tags to the location
+  // Attach selected tags to the location
   if (tagIds.length > 0) {
     const locationTags = tagIds.map((tagId) => ({
       location_id: locationData.id,
@@ -70,7 +71,7 @@ export async function recordSimulatedVisit({
     }
   }
 
-  // 3. Record the visit in location_visits
+  // Record the visit in location_visits
   // The PostgreSQL trigger on_location_visit_awarded will automatically run
   // evaluate_rider_badges() and calculate_user_badge_progress().
   const { data: visitData, error: visitError } = await supabase

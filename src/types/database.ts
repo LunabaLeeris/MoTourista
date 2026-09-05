@@ -39,7 +39,7 @@ export interface UserBadgeProgressRow {
   is_unlocked: boolean;
   is_pinned?: boolean;
   acquired_at?: string | null;
-  progress_data?: { tag_id: string; current: number; target: number }[] | null;
+  progress_data?: { tag_id: string; current: number }[] | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -52,8 +52,9 @@ export interface BadgeWithProgress extends BadgeRow {
   current_progress: number;
   target_progress: number;
   progress_percentage?: number;
-  progress_data?: { tag_id: string; current: number; target: number }[];
+  progress_data?: { tag_id: string; current: number; target?: number }[];
 }
+
 
 // Location tag with joined tag metadata.
 export interface LocationTagWithDetails extends LocationTagRow {
