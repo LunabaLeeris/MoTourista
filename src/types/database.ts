@@ -12,7 +12,6 @@ export type BadgeRow = Tables<'badges'>;
 
 // Type aliases for core application tables.
 export type ProfileRow = Tables<'profiles'>;
-export type UserBadgeRow = Tables<'user_badges'>;
 export type LocationRow = Tables<'locations'>;
 export type LocationImageRow = Tables<'location_images'>;
 export type LocationTagRow = Tables<'location_tags'>;
@@ -26,12 +25,7 @@ export interface ProfileWithDetails extends ProfileRow {
   driver_types?: DriverTypeRow | null;
   vehicle_types?: VehicleTypeRow | null;
   motorcycle_models?: MotorcycleModelRow | null;
-  user_badges?: (UserBadgeRow & { badges?: BadgeRow | null })[];
-}
-
-// User badge with joined badge definition.
-export interface UserBadgeWithDetails extends UserBadgeRow {
-  badges?: BadgeRow | null;
+  user_badge_progress?: UserBadgeProgressRow[];
 }
 
 // Materialized progress per user and badge.

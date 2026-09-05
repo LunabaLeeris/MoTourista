@@ -526,41 +526,59 @@ export type Database = {
         }
         Relationships: []
       }
-      user_badges: {
+      user_badge_progress: {
         Row: {
-          acquired_at: string
+          acquired_at: string | null
           badge_id: string
+          created_at: string
+          current_progress: number
           id: string
           is_pinned: boolean | null
+          is_unlocked: boolean
           progress_data: Json | null
+          progress_percentage: number
+          target_progress: number
+          updated_at: string
           user_id: string
         }
         Insert: {
-          acquired_at?: string
+          acquired_at?: string | null
           badge_id: string
+          created_at?: string
+          current_progress?: number
           id?: string
           is_pinned?: boolean | null
+          is_unlocked?: boolean
           progress_data?: Json | null
+          progress_percentage?: number
+          target_progress?: number
+          updated_at?: string
           user_id: string
         }
         Update: {
-          acquired_at?: string
+          acquired_at?: string | null
           badge_id?: string
+          created_at?: string
+          current_progress?: number
           id?: string
           is_pinned?: boolean | null
+          is_unlocked?: boolean
           progress_data?: Json | null
+          progress_percentage?: number
+          target_progress?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "user_badges_badge_id_fkey"
+            foreignKeyName: "user_badge_progress_badge_id_fkey"
             columns: ["badge_id"]
             isOneToOne: false
             referencedRelation: "badges"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_badges_user_id_fkey"
+            foreignKeyName: "user_badge_progress_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -597,7 +615,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_user_badge_progress: {
+        Args: { p_badge: Record<string, unknown>; p_user_id: string }
+        Returns: undefined
+      }
+      recalculate_user_badges: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
