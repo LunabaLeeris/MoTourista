@@ -20,6 +20,7 @@ import { RootStackParamList } from '../types/navigation';
 import { DriverTypeRow, VehicleTypeRow, MotorcycleModelRow } from '../types/database';
 import { getCurrentRiderLocation } from '../services/locationService';
 import { isLocalUri, uploadAvatar, validateImage } from '../services/imageService';
+import { getLookupOptions } from '../services/lookupService';
 
 export default function OnboardingScreen() {
   const { user, signOut, refreshOnboardingStatus } = useAuth();
@@ -45,66 +46,49 @@ export default function OnboardingScreen() {
   const [locating, setLocating] = useState(false);
   const [fetchingOptions, setFetchingOptions] = useState(true);
 
-  useEffect(() => {
-    loadLookupOptionsAndProfile();
-  }, []);
-
-  const loadLookupOptionsAndProfile = async () => {
+  // Fetch driver types, vehicle types, and motorcycle models from cache or database.
+  const loadLookupOptions = async () => {
     try {
       setFetchingOptions(true);
+      const options = await getLookupOptions();
 
-      // Fetch driver types from the database.
-      const { data: dTypes, error: dError } = await supabase
-        .from('driver_types')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (dError) {
-        console.error('Error fetching driver types:', dError);
+      if (options.driverTypes && options.driverTypes.length > 0) {
+        setDriverTypes(options.driverTypes);
+        setSelectedDriverTypeId((prev) => prev || options.driverTypes[0].id);
       }
 
-      if (dTypes && dTypes.length > 0) {
-        setDriverTypes(dTypes);
-        setSelectedDriverTypeId(dTypes[0].id);
+      if (options.vehicleTypes && options.vehicleTypes.length > 0) {
+        setVehicleTypes(options.vehicleTypes);
+        setSelectedVehicleTypeId((prev) => prev || options.vehicleTypes[0].id);
       }
 
-      // Fetch vehicle types from the database.
-      const { data: vTypes, error: vError } = await supabase
-        .from('vehicle_types')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (vError) {
-        console.error('Error fetching vehicle types:', vError);
+      if (options.motorcycleModels && options.motorcycleModels.length > 0) {
+        setMotorcycleModels(options.motorcycleModels);
       }
+    } catch (err: any) {
+      console.error('Error loading lookup options:', err);
+    } finally {
+      setFetchingOptions(false);
+    }
+  };
 
-      if (vTypes && vTypes.length > 0) {
-        setVehicleTypes(vTypes);
-        setSelectedVehicleTypeId(vTypes[0].id);
-      }
+  // Load existing rider profile if available.
+  const loadProfile = async () => {
+    if (!effectiveUserId) return;
 
-      // Fetch motorcycle models from the database.
-      const { data: mModels, error: mError } = await supabase
-        .from('motorcycle_models')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (mError) {
-        console.error('Error fetching motorcycle models:', mError);
-      }
-
-      if (mModels && mModels.length > 0) {
-        setMotorcycleModels(mModels);
-      }
-
-      // Load existing rider profile if available.
+    try {
       const { data: profile, error: pError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', effectiveUserId)
         .maybeSingle();
 
-      if (profile && !pError) {
+      if (pError) {
+        console.error('Error fetching profile:', pError);
+        return;
+      }
+
+      if (profile) {
         if (profile.full_name) setFullName(profile.full_name);
         if (profile.avatar_url) setAvatarUri(profile.avatar_url);
         if (profile.location_name) setLocationName(profile.location_name);
@@ -115,11 +99,19 @@ export default function OnboardingScreen() {
         if (profile.motorcycle_model_id) setSelectedMotorcycleModelId(profile.motorcycle_model_id);
       }
     } catch (err: any) {
-      console.error('Initial load error:', err);
-    } finally {
-      setFetchingOptions(false);
+      console.error('Error loading profile:', err);
     }
   };
+
+  useEffect(() => {
+    loadLookupOptions();
+  }, []);
+
+  useEffect(() => {
+    if (effectiveUserId) {
+      loadProfile();
+    }
+  }, [effectiveUserId]);
 
   // Select a photo from the camera or the gallery.
   const handlePickPhoto = async () => {
