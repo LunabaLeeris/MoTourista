@@ -1,4 +1,5 @@
 import {
+  BadgeCriteriaTuple,
   parseCriteriaTuples,
   calculateTotalTarget,
   parseProgressData,
@@ -11,7 +12,7 @@ describe('badgeCriteriaParser', () => {
         ['paresan', 5],
         ['coffee_spot', 3],
       ];
-      const result = parseCriteriaTuples(criteriaData);
+      const result: BadgeCriteriaTuple[] = parseCriteriaTuples(criteriaData);
 
       expect(result).toEqual([
         ['paresan', 5],
@@ -21,24 +22,21 @@ describe('badgeCriteriaParser', () => {
 
     it('parses total visits milestone criteria with wildcard "*"', () => {
       const criteriaData = [['*', 10]];
-      const result = parseCriteriaTuples(criteriaData);
+      const result: BadgeCriteriaTuple[] = parseCriteriaTuples(criteriaData);
 
       expect(result).toEqual([['*', 10]]);
     });
 
-    it('handles legacy object format {"tag_id": "paresan", "threshold": 5}', () => {
-      const legacyData = { tag_id: 'paresan', threshold: 5 };
-      const result = parseCriteriaTuples(legacyData);
-
-      expect(result).toEqual([['paresan', 5]]);
-    });
-
-    it('returns empty array when criteriaData is null or undefined', () => {
+    it('returns empty array when criteriaData is null, undefined, or non-array (e.g. legacy object)', () => {
       expect(parseCriteriaTuples(null)).toEqual([]);
       expect(parseCriteriaTuples(undefined)).toEqual([]);
+      expect(parseCriteriaTuples({ tag_id: 'paresan', threshold: 5 })).toEqual([]);
+      expect(parseCriteriaTuples('invalid')).toEqual([]);
     });
 
     it('safely filters out invalid or empty items in tuple array', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
       const invalidData = [
         ['paresan', 5],
         ['', 10], // empty tag
@@ -48,6 +46,7 @@ describe('badgeCriteriaParser', () => {
       const result = parseCriteriaTuples(invalidData);
 
       expect(result).toEqual([['paresan', 5]]);
+      warnSpy.mockRestore();
     });
 
     it('ensures threshold is at least 1', () => {
@@ -55,6 +54,29 @@ describe('badgeCriteriaParser', () => {
       const result = parseCriteriaTuples(zeroThreshold);
 
       expect(result).toEqual([['paresan', 1]]);
+    });
+
+    it('skips criteria tuple when tag_id does not exist in validTagIds and logs a warning', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const criteriaData = [
+        ['paresan', 5],
+        ['non_existent_tag', 3],
+        ['*', 10], // wildcard milestone criteria is always preserved
+      ];
+      const validTags = new Set(['paresan', 'coffee_spot']);
+      const result = parseCriteriaTuples(criteriaData, validTags);
+
+      expect(result).toEqual([
+        ['paresan', 5],
+        ['*', 10],
+      ]);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('tag_id "non_existent_tag" does not exist in tags table')
+      );
+
+      warnSpy.mockRestore();
     });
   });
 

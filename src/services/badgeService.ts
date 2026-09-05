@@ -1,10 +1,104 @@
 import { supabase } from '../lib/supabase';
 import { BadgeRow, BadgeWithProgress, UserBadgeProgressRow } from '../types/database';
 import {
+  BadgeCriteriaTuple,
   parseCriteriaTuples,
   calculateTotalTarget,
   parseProgressData,
 } from './badgeCriteriaParser';
+
+/**
+ * Checks if a specific tag_id exists in the tags table.
+ * Wildcard '*' is reserved for milestone total visits and is always valid.
+ */
+export async function checkTagExists(tagId: string): Promise<boolean> {
+  if (!tagId) return false;
+  if (tagId === '*') return true;
+
+  try {
+    const res = await supabase
+      .from('tags')
+      .select('id')
+      .eq('id', tagId)
+      .maybeSingle();
+
+    if (!res || res.error) {
+      if (res?.error) {
+        console.warn(`[badgeService] Error checking tag "${tagId}":`, res.error.message);
+      }
+      return false;
+    }
+
+    return Boolean(res.data);
+  } catch (err) {
+    console.warn(`[badgeService] Exception checking tag "${tagId}":`, err);
+    return false;
+  }
+}
+
+/**
+ * Checks if a single criteria tuple is valid:
+ * - Tuple format is [string, number] with threshold >= 1.
+ * - tag_id exists in tags table or is wildcard '*'.
+ * Logs a warning in development when an invalid tuple is detected.
+ */
+export async function isCriteriaTupleValid(tuple: unknown): Promise<boolean> {
+  if (!Array.isArray(tuple) || tuple.length < 2) {
+    console.warn('[badgeService] Invalid criteria tuple format (expected 2-tuple):', tuple);
+    return false;
+  }
+
+  const tagId = String(tuple[0] || '').trim();
+  const threshold = Number(tuple[1]);
+
+  if (!tagId) {
+    console.warn('[badgeService] Criteria tuple has empty tag_id:', tuple);
+    return false;
+  }
+
+  if (isNaN(threshold) || threshold < 1) {
+    console.warn(`[badgeService] Criteria tuple threshold must be >= 1 for tag "${tagId}":`, tuple[1]);
+    return false;
+  }
+
+  const exists = await checkTagExists(tagId);
+  if (!exists) {
+    console.warn(`[badgeService] Skipping invalid criteria tuple: tag_id "${tagId}" does not exist in tags table.`);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Retrieves the set of all valid tag IDs from the database tags table.
+ */
+export async function fetchValidTagIds(): Promise<Set<string>> {
+  try {
+    const res = await supabase.from('tags').select('id');
+    if (!res || res.error) {
+      if (res?.error) {
+        console.warn('[badgeService] Error fetching valid tag IDs:', res.error.message);
+      }
+      return new Set<string>();
+    }
+    return new Set(((res.data as Array<{ id: string }>) || []).map((row) => row.id));
+  } catch (err) {
+    console.warn('[badgeService] Exception fetching valid tag IDs:', err);
+    return new Set<string>();
+  }
+}
+
+/**
+ * Validates criteria tuples against the database tags table.
+ * Tuples referencing non-existent tags are skipped and logged as warnings.
+ */
+export async function validateCriteriaTuples(
+  criteriaData: unknown
+): Promise<BadgeCriteriaTuple[]> {
+  const validTagIds = await fetchValidTagIds();
+  return parseCriteriaTuples(criteriaData, validTagIds.size > 0 ? validTagIds : undefined);
+}
 
 /**
  * Retrieve all badges along with the user's precalculated progress from the database.
@@ -16,8 +110,8 @@ export async function fetchBadgesWithProgress(
   if (!userId) return [];
 
   try {
-    // Fetch badges definitions and precalculated user progress concurrently.
-    const [badgesRes, progressRes] = await Promise.all([
+    // Fetch badges definitions, precalculated user progress, and valid tag IDs concurrently.
+    const [badgesRes, progressRes, validTagIds] = await Promise.all([
       supabase
         .from('badges')
         .select('*')
@@ -26,6 +120,7 @@ export async function fetchBadgesWithProgress(
         .from('user_badge_progress')
         .select('*')
         .eq('user_id', userId),
+      fetchValidTagIds(),
     ]);
 
     if (badgesRes.error) throw badgesRes.error;
@@ -41,8 +136,12 @@ export async function fetchBadgesWithProgress(
     const badgesWithProgress: BadgeWithProgress[] = badges.map((badge) => {
       const progress = progressMap.get(badge.id);
 
-      // Parse criteria tuples [[tag_id, threshold], ...] for the target threshold
-      const tuples = parseCriteriaTuples(badge.criteria_data);
+      // Parse criteria tuples [[tag_id, threshold], ...] for the target threshold.
+      // Skips any tuple with an invalid tag_id if validTagIds were loaded.
+      const tuples = parseCriteriaTuples(
+        badge.criteria_data,
+        validTagIds.size > 0 ? validTagIds : undefined
+      );
       const calculatedTarget = calculateTotalTarget(tuples);
 
       const targetProgress = progress?.target_progress ?? calculatedTarget;

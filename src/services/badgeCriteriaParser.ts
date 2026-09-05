@@ -12,34 +12,48 @@ export interface BadgeProgressItem {
 
 /**
  * Parses badge criteria_data into a standardized array of 2-length tuples: [[tag_id, threshold], ...].
- * Handles both the new tuple array format and fallback legacy objects.
+ * If validTagIds is provided, skips tuples whose tag_id is not in the tags table (wildcard '*' is always valid).
+ * Logs warnings in development when an invalid tuple is skipped.
  */
-export function parseCriteriaTuples(criteriaData: unknown): BadgeCriteriaTuple[] {
+export function parseCriteriaTuples(
+  criteriaData: unknown,
+  validTagIds?: Set<string> | string[]
+): BadgeCriteriaTuple[] {
   if (!criteriaData) return [];
 
-  // New format: Array of 2-length tuples [[tag_id, threshold], ...]
+  const validTagSet = validTagIds
+    ? (validTagIds instanceof Set ? validTagIds : new Set(validTagIds))
+    : null;
+
+  // Array of 2-length tuples [[tag_id, threshold], ...]
   if (Array.isArray(criteriaData)) {
     const tuples: BadgeCriteriaTuple[] = [];
 
     for (const item of criteriaData) {
-      if (Array.isArray(item) && item.length >= 2) {
-        const tagId = String(item[0] || '').trim();
-        const threshold = Math.max(1, Number(item[1]) || 1);
-        if (tagId) {
-          tuples.push([tagId, threshold]);
-        }
+      if (!Array.isArray(item) || item.length < 2) {
+        console.warn('[badgeCriteriaParser] Skipping invalid criteria tuple (expected 2-tuple):', item);
+        continue;
       }
+
+      const tagId = String(item[0] || '').trim();
+      if (!tagId) {
+        console.warn('[badgeCriteriaParser] Skipping criteria tuple with empty tag_id:', item);
+        continue;
+      }
+
+      // Check if tag_id exists in valid tags (wildcard '*' is always valid for milestone total visits)
+      if (validTagSet && tagId !== '*' && !validTagSet.has(tagId)) {
+        console.warn(
+          `[badgeCriteriaParser] Skipping invalid criteria tuple: tag_id "${tagId}" does not exist in tags table.`
+        );
+        continue;
+      }
+
+      const threshold = Math.max(1, Number(item[1]) || 1);
+      tuples.push([tagId, threshold]);
     }
 
     return tuples;
-  }
-
-  // Fallback: Legacy object format {"tag_id": "...", "threshold": N}
-  if (typeof criteriaData === 'object' && criteriaData !== null) {
-    const raw = criteriaData as Record<string, any>;
-    const threshold = Math.max(1, Number(raw.threshold) || 1);
-    const tagId = typeof raw.tag_id === 'string' && raw.tag_id.trim() ? raw.tag_id.trim() : '*';
-    return [[tagId, threshold]];
   }
 
   return [];
