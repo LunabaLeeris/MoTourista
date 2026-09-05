@@ -23,7 +23,7 @@ import { isLocalUri, uploadAvatar, validateImage } from '../services/imageServic
 import { getLookupOptions } from '../services/lookupService';
 
 export default function OnboardingScreen() {
-  const { user, signOut, refreshOnboardingStatus } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const effectiveUserId = user?.id || '';
 
@@ -72,46 +72,23 @@ export default function OnboardingScreen() {
     }
   };
 
-  // Load existing rider profile if available.
-  const loadProfile = async () => {
-    if (!effectiveUserId) return;
-
-    try {
-      const { data: profile, error: pError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', effectiveUserId)
-        .maybeSingle();
-
-      if (pError) {
-        console.error('Error fetching profile:', pError);
-        return;
-      }
-
-      if (profile) {
-        if (profile.full_name) setFullName(profile.full_name);
-        if (profile.avatar_url) setAvatarUri(profile.avatar_url);
-        if (profile.location_name) setLocationName(profile.location_name);
-        if (profile.latitude) setLatitude(profile.latitude);
-        if (profile.longitude) setLongitude(profile.longitude);
-        if (profile.driver_type_id) setSelectedDriverTypeId(profile.driver_type_id);
-        if (profile.vehicle_type_id) setSelectedVehicleTypeId(profile.vehicle_type_id);
-        if (profile.motorcycle_model_id) setSelectedMotorcycleModelId(profile.motorcycle_model_id);
-      }
-    } catch (err: any) {
-      console.error('Error loading profile:', err);
+  // Pre-populate form fields whenever the profile from AuthContext is available.
+  useEffect(() => {
+    if (profile) {
+      if (profile.full_name) setFullName(profile.full_name);
+      if (profile.avatar_url) setAvatarUri(profile.avatar_url);
+      if (profile.location_name) setLocationName(profile.location_name);
+      if (profile.latitude) setLatitude(profile.latitude);
+      if (profile.longitude) setLongitude(profile.longitude);
+      if (profile.driver_type_id) setSelectedDriverTypeId(profile.driver_type_id);
+      if (profile.vehicle_type_id) setSelectedVehicleTypeId(profile.vehicle_type_id);
+      if (profile.motorcycle_model_id) setSelectedMotorcycleModelId(profile.motorcycle_model_id);
     }
-  };
+  }, [profile]);
 
   useEffect(() => {
     loadLookupOptions();
   }, []);
-
-  useEffect(() => {
-    if (effectiveUserId) {
-      loadProfile();
-    }
-  }, [effectiveUserId]);
 
   // Select a photo from the camera or the gallery.
   const handlePickPhoto = async () => {
@@ -205,7 +182,7 @@ export default function OnboardingScreen() {
 
       if (error) throw error;
 
-      await refreshOnboardingStatus();
+      await refreshProfile();
       if (navigation.canGoBack()) {
         navigation.goBack();
       }

@@ -12,47 +12,25 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
-import { ProfileWithDetails, BadgeWithProgress } from '../types/database';
+import { BadgeWithProgress } from '../types/database';
 import { fetchBadgesWithProgress } from '../services/badgeService';
 
 export default function ProfilePreviewScreen() {
-  const { user, signOut } = useAuth();
+  const { user, profile, isLoading, signOut } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const effectiveUserId = user?.id || '';
 
-  const [profile, setProfile] = useState<ProfileWithDetails | null>(null);
   const [badges, setBadges] = useState<BadgeWithProgress[]>([]);
   const [selectedBadge, setSelectedBadge] = useState<BadgeWithProgress | null>(null);
-  const [loading, setLoading] = useState(true);
   const [loadingBadges, setLoadingBadges] = useState(true);
 
   useEffect(() => {
     if (effectiveUserId) {
-      fetchProfile();
       loadBadges();
     }
   }, [effectiveUserId]);
-
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*, driver_types (*), vehicle_types (*), motorcycle_models (*)')
-        .eq('id', effectiveUserId)
-        .maybeSingle();
-
-      if (error) throw error;
-      setProfile(data as ProfileWithDetails);
-    } catch {
-      // The function ignores errors during profile retrieval.
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadBadges = async () => {
     try {
@@ -74,7 +52,7 @@ export default function ProfilePreviewScreen() {
     navigation.navigate('EditProfile');
   };
 
-  if (loading) {
+  if (isLoading && !profile) {
     return (
       <View className="flex-1 bg-white items-center justify-center p-6">
         <ActivityIndicator color="#000" />
