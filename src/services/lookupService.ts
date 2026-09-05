@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { DriverTypeRow, VehicleTypeRow, MotorcycleModelRow } from '../types/database';
+import { DriverTypeRow, VehicleTypeRow, MotorcycleModelRow, TagRow } from '../types/database';
 
 export interface LookupOptions {
   driverTypes: DriverTypeRow[];
@@ -9,6 +9,7 @@ export interface LookupOptions {
 
 // In-memory session cache for lookup tables to prevent redundant queries across the app.
 let cachedLookupOptions: LookupOptions | null = null;
+let cachedTags: TagRow[] | null = null;
 
 /**
  * Fetches driver types, vehicle types, and motorcycle models from Supabase in parallel.
@@ -59,8 +60,37 @@ export async function getLookupOptions(forceRefresh = false): Promise<LookupOpti
 }
 
 /**
+ * Fetches location hotspot tags from Supabase.
+ * Caches results in-memory so subsequent calls across any screen return immediately.
+ */
+export async function getTags(forceRefresh = false): Promise<TagRow[]> {
+  if (cachedTags && !forceRefresh) {
+    return cachedTags;
+  }
+
+  const { data, error } = await supabase
+    .from('tags')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+
+  const tags = data || [];
+  if (tags.length > 0) {
+    cachedTags = tags;
+  }
+
+  return tags;
+}
+
+/**
  * Clears the in-memory lookup cache if fresh data needs to be pulled.
  */
 export function clearLookupCache(): void {
   cachedLookupOptions = null;
+  cachedTags = null;
 }
+

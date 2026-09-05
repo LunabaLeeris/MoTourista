@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
-import ProfilePreviewScreen from '../screens/ProfilePreviewScreen';
+import MainTabNavigator from './MainTabNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -31,7 +31,7 @@ export function RootNavigator() {
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         ) : (
           <>
-            <Stack.Screen name="ProfilePreview" component={ProfilePreviewScreen} />
+            <Stack.Screen name="MainTabs" component={MainTabNavigator} />
             <Stack.Screen name="EditProfile" component={OnboardingScreen} />
           </>
         )}

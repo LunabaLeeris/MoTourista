@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Pressable,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
@@ -26,11 +26,13 @@ export default function ProfilePreviewScreen() {
   const [selectedBadge, setSelectedBadge] = useState<BadgeWithProgress | null>(null);
   const [loadingBadges, setLoadingBadges] = useState(true);
 
-  useEffect(() => {
-    if (effectiveUserId) {
-      loadBadges();
-    }
-  }, [effectiveUserId]);
+  useFocusEffect(
+    useCallback(() => {
+      if (effectiveUserId) {
+        loadBadges();
+      }
+    }, [effectiveUserId])
+  );
 
   const loadBadges = async () => {
     try {
