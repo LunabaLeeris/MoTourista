@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
 import { DriverTypeRow, VehicleTypeRow, MotorcycleModelRow } from '../types/database';
 import { getCurrentRiderLocation } from '../services/locationService';
+import { isLocalUri, uploadAvatar, validateImage } from '../services/imageService';
 
 export default function OnboardingScreen() {
   const { user, signOut, refreshOnboardingStatus } = useAuth();
@@ -39,6 +40,7 @@ export default function OnboardingScreen() {
   const [isVehicleDropdownOpen, setIsVehicleDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [fetchingOptions, setFetchingOptions] = useState(true);
@@ -133,10 +135,20 @@ export default function OnboardingScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setAvatarUri(result.assets[0].uri);
+        const asset = result.assets[0];
+
+        try {
+          // Guard clause: Early validation check for size and image format
+          validateImage(asset.fileSize, asset.mimeType, asset.uri);
+          setAvatarUri(asset.uri);
+          setAvatarBase64(asset.base64 || null);
+        } catch (validationErr: any) {
+          Alert.alert('Invalid Photo', validationErr.message);
+        }
       }
     } catch (err: any) {
       Alert.alert('Image Picker Error', err.message);
@@ -165,15 +177,28 @@ export default function OnboardingScreen() {
       return;
     }
 
+    if (!effectiveUserId) {
+      Alert.alert('Session Error', 'No active user session found. Please log in again.');
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Update the profile table in the database.
+      let finalAvatarUrl = avatarUri || '';
+
+      // If avatar is a local or blob URI, upload it to the 'avatars' storage vault first.
+      if (avatarUri && isLocalUri(avatarUri)) {
+        finalAvatarUrl = await uploadAvatar(avatarUri, effectiveUserId, avatarBase64);
+        setAvatarUri(finalAvatarUrl);
+      }
+
+      // Update the profile table in the database with the cloud URI.
       const { error } = await supabase.from('profiles').upsert(
         {
           id: effectiveUserId,
           full_name: fullName.trim(),
-          avatar_url: avatarUri,
+          avatar_url: finalAvatarUrl,
           location_name: locationName.trim() || 'Philippines',
           latitude: latitude,
           longitude: longitude,

@@ -21,6 +21,7 @@ type OAuthProviders = 'google' | 'facebook';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -50,16 +51,30 @@ export default function LoginScreen() {
         );
 
         if (result.type === 'success' && result.url) {
-          const urlParams = new URL(result.url);
-          const hashParams = new URLSearchParams(urlParams.hash.substring(1));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
+          const url = new URL(result.url);
+          const searchParams = url.searchParams;
+          const hashParams = new URLSearchParams(
+            url.hash ? url.hash.replace(/^#/, '') : ''
+          );
 
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
+          const code = searchParams.get('code') || hashParams.get('code');
+          if (code) {
+            const { error: exchangeError } =
+              await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) throw exchangeError;
+          } else {
+            const accessToken =
+              searchParams.get('access_token') || hashParams.get('access_token');
+            const refreshToken =
+              searchParams.get('refresh_token') || hashParams.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              if (sessionError) throw sessionError;
+            }
           }
         }
       }
@@ -75,8 +90,13 @@ export default function LoginScreen() {
 
   // Authenticate the user with an email and a password.
   const handleEmailAuth = async () => {
-    if (!email || !password) {
-      Alert.alert('Required Fields', 'Please enter both an email and password.');
+    if (!email || !password || (isSignUp && !confirmPassword)) {
+      Alert.alert('Required Fields', 'Please enter all required fields.');
+      return;
+    }
+
+    if (isSignUp && password !== confirmPassword) {
+      Alert.alert('Password Error', 'Passwords do not match.');
       return;
     }
 
@@ -99,6 +119,7 @@ export default function LoginScreen() {
             'Signed up successfully. You can now log in.'
           );
           setIsSignUp(false);
+          setConfirmPassword('');
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -120,9 +141,9 @@ export default function LoginScreen() {
       className="flex-1 bg-white"
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
         keyboardShouldPersistTaps="handled"
-        className="p-6 justify-center max-w-md w-full self-center"
+        className="p-6 max-w-md w-full self-center"
       >
         {/* Title */}
         <View className="mb-6">
@@ -187,6 +208,22 @@ export default function LoginScreen() {
             className="border border-neutral-300 p-3 rounded text-black mb-4"
           />
 
+          {isSignUp && (
+            <>
+              <Text className="text-xs text-neutral-600 mb-1">
+                Confirm Password
+              </Text>
+              <TextInput
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm Password"
+                placeholderTextColor="#888"
+                secureTextEntry
+                className="border border-neutral-300 p-3 rounded text-black mb-4"
+              />
+            </>
+          )}
+
           <TouchableOpacity
             onPress={handleEmailAuth}
             disabled={loading}
@@ -202,7 +239,10 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setIsSignUp(!isSignUp)}
+            onPress={() => {
+              setIsSignUp(!isSignUp);
+              setConfirmPassword('');
+            }}
             className="items-center p-2"
           >
             <Text className="text-neutral-700 text-sm">
