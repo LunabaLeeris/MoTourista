@@ -1,107 +1,80 @@
 import { supabase } from '../lib/supabase';
-import { BadgeRow, BadgeWithProgress, UserBadgeRow } from '../types/database';
+import { BadgeRow, BadgeWithProgress, UserBadgeProgressRow, UserBadgeRow } from '../types/database';
+import {
+  parseCriteriaTuples,
+  calculateTotalTarget,
+  parseProgressData,
+} from './badgeCriteriaParser';
 
-interface BadgeCriteria {
-  threshold?: number;
-  tag_id?: string;
-}
-
-// Retrieve all badges along with the user's progress and unlock state.
+/**
+ * Retrieve all badges along with the user's precalculated progress from the database.
+ * Completely eliminates client-side recalculation and historical visits fetching.
+ */
 export async function fetchBadgesWithProgress(
   userId: string
 ): Promise<BadgeWithProgress[]> {
+  if (!userId) return [];
+
   try {
-    // Fetch all badges ordered by display order.
-    const { data: badgesData, error: badgesError } = await supabase
-      .from('badges')
-      .select('*')
-      .order('display_order', { ascending: true });
+    // Fetch badges definitions, precalculated progress, and legacy unlock records concurrently.
+    const [badgesRes, progressRes, userBadgesRes] = await Promise.all([
+      supabase
+        .from('badges')
+        .select('*')
+        .order('display_order', { ascending: true }),
+      supabase
+        .from('user_badge_progress')
+        .select('*')
+        .eq('user_id', userId),
+      supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', userId),
+    ]);
 
-    if (badgesError) throw badgesError;
-    const badges: BadgeRow[] = badgesData || [];
+    if (badgesRes.error) throw badgesRes.error;
 
-    // Fetch user's unlocked badges.
-    const { data: userBadgesData, error: userBadgesError } = await supabase
-      .from('user_badges')
-      .select('*')
-      .eq('user_id', userId);
+    const badges: BadgeRow[] = badgesRes.data || [];
+    const progressRows = (progressRes.data || []) as UserBadgeProgressRow[];
+    const userBadges = (userBadgesRes.data || []) as UserBadgeRow[];
 
-    if (userBadgesError) throw userBadgesError;
-    const userBadges: UserBadgeRow[] = userBadgesData || [];
-    const userBadgesMap = new Map<string, UserBadgeRow>(
+    const progressMap = new Map<string, UserBadgeProgressRow>(
+      progressRows.map((p) => [p.badge_id, p])
+    );
+    const legacyUnlockedMap = new Map<string, UserBadgeRow>(
       userBadges.map((ub) => [ub.badge_id, ub])
     );
 
-    // Fetch user's visits.
-    const { data: visitsData, error: visitsError } = await supabase
-      .from('location_visits')
-      .select('location_id')
-      .eq('user_id', userId);
-
-    if (visitsError) throw visitsError;
-    const visits = visitsData || [];
-    const totalVisits = visits.length;
-
-    // Map location IDs to their associated tags for tag-specific visit badges.
-    const locationIds = Array.from(
-      new Set(visits.map((v) => v.location_id).filter(Boolean))
-    );
-
-    const locationTagsMap = new Map<string, Set<string>>();
-    if (locationIds.length > 0) {
-      const { data: tagsData, error: tagsError } = await supabase
-        .from('location_tags')
-        .select('location_id, tag_id')
-        .in('location_id', locationIds);
-
-      if (!tagsError && tagsData) {
-        tagsData.forEach((row) => {
-          if (!locationTagsMap.has(row.location_id)) {
-            locationTagsMap.set(row.location_id, new Set());
-          }
-          locationTagsMap.get(row.location_id)!.add(row.tag_id);
-        });
-      }
-    }
-
-    //  Calculate progress for each badge.
+    // Map each badge into BadgeWithProgress directly from database state.
     const badgesWithProgress: BadgeWithProgress[] = badges.map((badge) => {
-      const userBadge = userBadgesMap.get(badge.id);
-      const isUnlocked = Boolean(userBadge);
+      const progress = progressMap.get(badge.id);
+      const legacyUnlocked = legacyUnlockedMap.get(badge.id);
 
-      const criteria = (
-        typeof badge.criteria_data === 'object' && badge.criteria_data !== null
-          ? badge.criteria_data
-          : {}
-      ) as BadgeCriteria;
+      // Parse criteria tuples [[tag_id, threshold], ...] for the target threshold
+      const tuples = parseCriteriaTuples(badge.criteria_data);
+      const calculatedTarget = calculateTotalTarget(tuples);
 
-      const targetProgress = Number(criteria.threshold) || 1;
-      let currentProgress = 0;
-
-      if (badge.criteria_type === 'total_visits') {
-        currentProgress = totalVisits;
-      } else if (badge.criteria_type === 'tag_visits' && criteria.tag_id) {
-        const tagId = criteria.tag_id;
-        let matchingCount = 0;
-        for (const locId of locationIds) {
-          if (locationTagsMap.get(locId)?.has(tagId)) {
-            matchingCount++;
-          }
-        }
-        currentProgress = matchingCount;
-      }
+      const targetProgress = progress?.target_progress ?? calculatedTarget;
+      const isUnlocked = Boolean(progress?.is_unlocked || legacyUnlocked);
+      let currentProgress = progress?.current_progress ?? (isUnlocked ? targetProgress : 0);
 
       if (isUnlocked) {
         currentProgress = Math.max(currentProgress, targetProgress);
       }
 
+      const progressData = parseProgressData(progress?.progress_data);
+
       return {
         ...badge,
         is_unlocked: isUnlocked,
-        acquired_at: userBadge?.acquired_at || null,
-        is_pinned: userBadge?.is_pinned || false,
+        acquired_at: progress?.acquired_at || legacyUnlocked?.acquired_at || null,
+        is_pinned: progress?.is_pinned || legacyUnlocked?.is_pinned || false,
         current_progress: currentProgress,
         target_progress: targetProgress,
+        progress_percentage:
+          progress?.progress_percentage ??
+          Math.round((currentProgress / targetProgress) * 100),
+        progress_data: progressData,
       };
     });
 

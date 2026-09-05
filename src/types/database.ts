@@ -34,13 +34,31 @@ export interface UserBadgeWithDetails extends UserBadgeRow {
   badges?: BadgeRow | null;
 }
 
-// Badge definition with optional user unlock progress.
+// Materialized progress per user and badge.
+export interface UserBadgeProgressRow {
+  id: string;
+  user_id: string;
+  badge_id: string;
+  current_progress: number;
+  target_progress: number;
+  progress_percentage: number;
+  is_unlocked: boolean;
+  is_pinned?: boolean;
+  acquired_at?: string | null;
+  progress_data?: { tag_id: string; current: number; target: number }[] | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Badge definition with user unlock progress and criteria breakdown.
 export interface BadgeWithProgress extends BadgeRow {
   is_unlocked: boolean;
   acquired_at?: string | null;
   is_pinned?: boolean;
   current_progress: number;
   target_progress: number;
+  progress_percentage?: number;
+  progress_data?: { tag_id: string; current: number; target: number }[];
 }
 
 // Location tag with joined tag metadata.

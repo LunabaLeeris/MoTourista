@@ -171,11 +171,10 @@ export default function ProfilePreviewScreen() {
                   className="w-[22%] items-center"
                 >
                   <View
-                    className={`w-14 h-14 rounded-xl items-center justify-center border ${
-                      badge.is_unlocked
-                        ? 'bg-black border-black shadow-sm'
-                        : 'bg-neutral-100 border-neutral-200'
-                    }`}
+                    className={`w-14 h-14 rounded-xl items-center justify-center border ${badge.is_unlocked
+                      ? 'bg-black border-black shadow-sm'
+                      : 'bg-neutral-100 border-neutral-200'
+                      }`}
                   >
                     <MaterialCommunityIcons
                       name={(badge.icon || 'trophy-outline') as any}
@@ -187,9 +186,8 @@ export default function ProfilePreviewScreen() {
                   {/* Small Progress Bar */}
                   <View className="w-12 h-1.5 bg-neutral-200 rounded-full overflow-hidden mt-1.5">
                     <View
-                      className={`h-full rounded-full ${
-                        badge.is_unlocked ? 'bg-black' : 'bg-neutral-600'
-                      }`}
+                      className={`h-full rounded-full ${badge.is_unlocked ? 'bg-black' : 'bg-neutral-600'
+                        }`}
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </View>
@@ -228,11 +226,10 @@ export default function ProfilePreviewScreen() {
             >
               {/* Badge Icon */}
               <View
-                className={`w-20 h-20 rounded-2xl items-center justify-center border mb-4 ${
-                  selectedBadge.is_unlocked
-                    ? 'bg-black border-black'
-                    : 'bg-neutral-100 border-neutral-200'
-                }`}
+                className={`w-20 h-20 rounded-2xl items-center justify-center border mb-4 ${selectedBadge.is_unlocked
+                  ? 'bg-black border-black'
+                  : 'bg-neutral-100 border-neutral-200'
+                  }`}
               >
                 <MaterialCommunityIcons
                   name={(selectedBadge.icon || 'trophy-outline') as any}
@@ -277,7 +274,7 @@ export default function ProfilePreviewScreen() {
                       Math.round(
                         (selectedBadge.current_progress /
                           selectedBadge.target_progress) *
-                          100
+                        100
                       )
                     )}
                     %)
@@ -294,7 +291,7 @@ export default function ProfilePreviewScreen() {
                         Math.round(
                           (selectedBadge.current_progress /
                             selectedBadge.target_progress) *
-                            100
+                          100
                         )
                       )}%`,
                     }}
