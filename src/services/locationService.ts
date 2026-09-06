@@ -194,3 +194,14 @@ export async function getCurrentRiderLocation(): Promise<LocationResult> {
     readableLocation,
   };
 }
+
+// Re-export Philippine geographic bounds and restriction utilities.
+export {
+  PHILIPPINES_BOUNDS,
+  PHILIPPINES_CAMERA_BOUNDS,
+  DEFAULT_MANILA_COORDINATES,
+} from '../config/mapConfig';
+export {
+  isWithinPhilippines,
+  clampToPhilippines,
+} from '../lib/locationRestrictions';
