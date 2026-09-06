@@ -4,11 +4,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainTabParamList } from '../types/navigation';
 import ProfilePreviewScreen from '../screens/ProfilePreviewScreen';
 import VisitScreen from '../screens/VisitScreen';
+import PostsScreen from '../screens/PostsScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 /**
- * Bottom navigation bar for primary app sections: Profile and Visit testing.
+ * Bottom navigation bar for primary app sections: Posts, Profile, and Visit testing.
  * Provides intuitive, standard mobile tab navigation.
  */
 export default function MainTabNavigator() {
@@ -32,6 +33,20 @@ export default function MainTabNavigator() {
         },
       }}
     >
+      <Tab.Screen
+        name="Posts"
+        component={PostsScreen}
+        options={{
+          tabBarLabel: 'Post',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'card-text' : 'card-text-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
       <Tab.Screen
         name="Profile"
         component={ProfilePreviewScreen}

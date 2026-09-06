@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabase';
@@ -19,7 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
 import { DriverTypeRow, VehicleTypeRow, MotorcycleModelRow } from '../types/database';
 import { getCurrentRiderLocation } from '../services/locationService';
-import { isLocalUri, uploadAvatar, validateImage } from '../services/imageService';
+import { isLocalUri, uploadAvatar, pickImageFromLibrary } from '../services/imageService';
 import { getLookupOptions } from '../services/lookupService';
 
 export default function OnboardingScreen() {
@@ -93,34 +92,13 @@ export default function OnboardingScreen() {
   // Select a photo from the camera or the gallery.
   const handlePickPhoto = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Please allow gallery access to select a photo.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-
-        try {
-          // Guard clause: Early validation check for size and image format
-          validateImage(asset.fileSize, asset.mimeType, asset.uri);
-          setAvatarUri(asset.uri);
-          setAvatarBase64(asset.base64 || null);
-        } catch (validationErr: any) {
-          Alert.alert('Invalid Photo', validationErr.message);
-        }
+      const picked = await pickImageFromLibrary({ aspect: [1, 1] });
+      if (picked) {
+        setAvatarUri(picked.uri);
+        setAvatarBase64(picked.base64 || null);
       }
     } catch (err: any) {
-      Alert.alert('Image Picker Error', err.message);
+      Alert.alert('Photo Notice', err.message || 'Could not select photo.');
     }
   };
 
