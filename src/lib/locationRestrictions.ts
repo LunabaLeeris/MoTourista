@@ -1,4 +1,5 @@
-import { Coordinates, isValidCoordinates } from '../services/locationService';
+import { Coordinates } from '../types/location';
+import { isValidCoordinates } from './locationValidator';
 import { PHILIPPINES_BOUNDS } from '../config/mapConfig';
 
 /**

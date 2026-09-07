@@ -1,9 +1,11 @@
+// [MOVE] move this test eventually to folder lib
 import {
-  BadgeCriteriaTuple,
   parseCriteriaTuples,
   calculateTotalTarget,
   parseProgressData,
-} from '../badgeCriteriaParser';
+} from '../../lib/badgeParser';
+
+import { BadgeCriteriaTuple } from '../../types/badge';
 
 describe('badgeCriteriaParser', () => {
   describe('parseCriteriaTuples', () => {

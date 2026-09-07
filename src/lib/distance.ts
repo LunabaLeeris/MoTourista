@@ -1,4 +1,4 @@
-import { Coordinates } from '../services/locationService';
+import { Coordinates } from "../types/location";
 
 // Earth radius constants.
 const EARTH_RADIUS_METERS = 6371e3;

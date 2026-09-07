@@ -1,4 +1,4 @@
-import { Coordinates } from './locationService';
+import { Coordinates } from '../types/location';
 import { isWithinPhilippines } from '../lib/locationRestrictions';
 import { calculateHaversineDistance } from '../lib/distance';
 import { RouteResult } from '../types/map';

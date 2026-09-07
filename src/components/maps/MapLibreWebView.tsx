@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef, useEffect, useState, useCallback } from 'react';
 import { View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Coordinates } from '../../services/locationService';
+import { Coordinates } from '../../types/location';
 import { ACTIVE_MAP_CONFIG, getMapStyleUrl, DEFAULT_MANILA_COORDINATES } from '../../config/mapConfig';
 import { POI_CONFIG, OSM_DEFAULT_SPRITE_ICONS } from '../../config/poiConfig';
 import { MAP_STYLE_CONFIG } from '../../config/mapStyleConfig';

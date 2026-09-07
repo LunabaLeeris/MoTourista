@@ -3,15 +3,23 @@ import {
   MAX_IMAGE_SIZE_BYTES,
   ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_IMAGE_EXTENSIONS,
-  isLocalUri,
-  isAllowedImage,
-  getExtensionFromMimeOrUri,
-  validateImage,
-  decodeBase64ToArrayBuffer,
+} from '../../types/image';
+
+import {
   uploadAvatar,
   uploadImageToStorage,
   pickImageFromLibrary,
 } from '../imageService';
+
+// [MOVE] move this to lib
+import {
+  isLocalUri,
+  isAllowedImage,
+  getExtensionFromMimeOrUri,
+  validateImage,
+  decodeBase64ToArrayBuffer
+} from '../../lib/image';
+
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
 

@@ -14,7 +14,9 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MoTouristaMap from '../components/maps/MoTouristaMap';
-import { Coordinates, getCurrentRiderLocation, DEFAULT_MANILA_COORDINATES } from '../services/locationService';
+import { Coordinates } from '../types/location';
+import { DEFAULT_MANILA_COORDINATES } from '../config/mapConfig';
+import { getCurrentRiderLocation } from '../services/locationService';
 import { fetchApprovedLocations } from '../services/postService';
 import { getTags } from '../services/lookupService';
 import { calculateRouteToMarkedLocation } from '../services/routingService';

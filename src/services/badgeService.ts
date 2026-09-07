@@ -1,11 +1,11 @@
 import { supabase } from '../lib/supabase';
 import { BadgeRow, BadgeWithProgress, UserBadgeProgressRow } from '../types/database';
+import { BadgeCriteriaTuple } from '../types/badge';
 import {
-  BadgeCriteriaTuple,
   parseCriteriaTuples,
   calculateTotalTarget,
   parseProgressData,
-} from './badgeCriteriaParser';
+} from '../lib/badgeParser';
 
 /**
  * Checks if a specific tag_id exists in the tags table.

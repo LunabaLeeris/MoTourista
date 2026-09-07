@@ -1,5 +1,5 @@
 import { MapBounds } from '../types/map';
-import { Coordinates } from '../services/locationService';
+import { Coordinates } from '../types/location';
 
 // Geographic boundary coordinate limits for the Philippines.
 export const PHILIPPINES_BOUNDS = {

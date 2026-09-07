@@ -1,11 +1,9 @@
+import { ImageUploadPayload } from '../types/image';
 import { supabase } from '../lib/supabase';
 import { LocationWithDetails } from '../types/database';
-import {
-  ImageUploadPayload,
-  uploadImageToStorage,
-  getExtensionFromMimeOrUri,
-} from './imageService';
-import { validateCoordinates } from './locationService';
+import { uploadImageToStorage, } from './imageService';
+import { getExtensionFromMimeOrUri } from '../lib/image';
+import { validateCoordinates } from '../lib/locationValidator';
 
 // Input payload for uploaded post photos, reusing ImageUploadPayload from imageService.
 export type PostImageInput = ImageUploadPayload;

@@ -1,4 +1,4 @@
-import { Coordinates } from '../services/locationService';
+import { Coordinates } from "./location";
 
 // Geographic boundary box with south-west and north-east coordinates [longitude, latitude].
 export interface MapBounds {

@@ -1,6 +1,10 @@
+// [MOVE] move this eventually to lib
 import {
   validateCoordinates,
-  isValidCoordinates,
+  isValidCoordinates
+} from '../../lib/locationValidator'
+
+import {
   reverseGeocodeCoordinates,
 } from '../locationService';
 

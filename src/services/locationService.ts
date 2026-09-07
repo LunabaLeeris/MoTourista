@@ -1,85 +1,6 @@
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
-
-// Coordinate representation for geographic positions.
-export interface Coordinates {
-  latitude: number;
-  longitude: number;
-}
-
-// Complete rider location result with geographic coordinates and text address.
-export interface LocationResult {
-  latitude: number;
-  longitude: number;
-  readableLocation: string;
-}
-
-// Guard clause to validate that latitude and longitude coordinates are valid geographic numbers.
-export function validateCoordinates(latitude: number, longitude: number): void {
-  if (
-    latitude === undefined ||
-    latitude === null ||
-    isNaN(latitude) ||
-    latitude < -90 ||
-    latitude > 90
-  ) {
-    throw new Error('Valid latitude between -90 and 90 is required.');
-  }
-
-  if (
-    longitude === undefined ||
-    longitude === null ||
-    isNaN(longitude) ||
-    longitude < -180 ||
-    longitude > 180
-  ) {
-    throw new Error('Valid longitude between -180 and 180 is required.');
-  }
-}
-
-// Check whether given coordinates fall within valid geographic boundaries.
-export function isValidCoordinates(
-  latitude?: number | null,
-  longitude?: number | null
-): boolean {
-  if (
-    latitude === undefined ||
-    latitude === null ||
-    isNaN(latitude) ||
-    latitude < -90 ||
-    latitude > 90
-  ) {
-    return false;
-  }
-
-  if (
-    longitude === undefined ||
-    longitude === null ||
-    isNaN(longitude) ||
-    longitude < -180 ||
-    longitude > 180
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-// Structure of OpenStreetMap reverse geocoding API response.
-interface NominatimAddress {
-  city?: string;
-  town?: string;
-  municipality?: string;
-  county?: string;
-  state?: string;
-  region?: string;
-  country?: string;
-}
-
-interface NominatimResponse {
-  address?: NominatimAddress;
-  display_name?: string;
-}
+import { NominatimResponse, LocationResult } from '../types/location'
 
 // Convert coordinates to a readable city and region text string.
 export async function reverseGeocodeCoordinates(
@@ -194,14 +115,3 @@ export async function getCurrentRiderLocation(): Promise<LocationResult> {
     readableLocation,
   };
 }
-
-// Re-export Philippine geographic bounds and restriction utilities.
-export {
-  PHILIPPINES_BOUNDS,
-  PHILIPPINES_CAMERA_BOUNDS,
-  DEFAULT_MANILA_COORDINATES,
-} from '../config/mapConfig';
-export {
-  isWithinPhilippines,
-  clampToPhilippines,
-} from '../lib/locationRestrictions';
