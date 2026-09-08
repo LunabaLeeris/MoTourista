@@ -142,8 +142,8 @@ export async function fetchBadgesWithProgress(
         badge.criteria_data,
         validTagIds.size > 0 ? validTagIds : undefined
       );
-      const calculatedTarget = calculateTotalTarget(tuples);
 
+      const calculatedTarget = calculateTotalTarget(tuples);
       const targetProgress = progress?.target_progress ?? calculatedTarget;
       const isUnlocked = Boolean(progress?.is_unlocked);
       let currentProgress = progress?.current_progress ?? (isUnlocked ? targetProgress : 0);
