@@ -14,10 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { TagRow } from '../types/database';
 import { getTags } from '../services/lookupService';
-import {
-  getCurrentRiderLocation,
-  validateCoordinates,
-} from '../services/locationService';
+import { getCurrentRiderLocation } from '../services/locationService';
+import { validateCoordinates } from '../lib/locationValidator';
 import { createPost, PostImageInput } from '../services/postService';
 import { pickImageFromLibrary } from '../services/imageService';
 
@@ -300,11 +298,10 @@ export default function CreatePostScreen() {
                   <TouchableOpacity
                     key={tag.id}
                     onPress={() => toggleTag(tag.id)}
-                    className={`flex-row items-center px-3 py-1.5 rounded-full border ${
-                      isSelected
+                    className={`flex-row items-center px-3 py-1.5 rounded-full border ${isSelected
                         ? 'bg-black border-black'
                         : 'bg-white border-neutral-300'
-                    }`}
+                      }`}
                   >
                     <MaterialCommunityIcons
                       name={(tag.icon as any) || 'tag-outline'}
@@ -313,9 +310,8 @@ export default function CreatePostScreen() {
                       className="mr-1"
                     />
                     <Text
-                      className={`text-xs font-medium ml-1 ${
-                        isSelected ? 'text-white' : 'text-neutral-800'
-                      }`}
+                      className={`text-xs font-medium ml-1 ${isSelected ? 'text-white' : 'text-neutral-800'
+                        }`}
                     >
                       {tag.name}
                     </Text>

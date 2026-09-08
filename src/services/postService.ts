@@ -1,11 +1,9 @@
+import { ImageUploadPayload } from '../types/image';
 import { supabase } from '../lib/supabase';
 import { LocationWithDetails } from '../types/database';
-import {
-  ImageUploadPayload,
-  uploadImageToStorage,
-  getExtensionFromMimeOrUri,
-} from './imageService';
-import { validateCoordinates } from './locationService';
+import { uploadImageToStorage, } from './imageService';
+import { getExtensionFromMimeOrUri } from '../lib/image';
+import { validateCoordinates } from '../lib/locationValidator';
 
 // Input payload for uploaded post photos, reusing ImageUploadPayload from imageService.
 export type PostImageInput = ImageUploadPayload;
@@ -299,5 +297,37 @@ export async function deletePost(
   } catch (err: any) {
     console.error('Unexpected error in deletePost:', err);
     return { success: false, error: err };
+  }
+}
+
+// Fetch all locations to display as markers on the map.
+// [WARNING] find way to memoize this 
+export async function fetchApprovedLocations(): Promise<LocationWithDetails[]> {
+  try {
+    const { data, error } = await supabase
+      .from('locations')
+      .select(`
+        *,
+        location_statuses (*),
+        location_images (*),
+        location_tags (
+          *,
+          tags (*)
+        ),
+        location_hearts (*),
+        location_visits (*),
+        profiles:profiles!created_by (*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch approved locations:', error.message);
+      return [];
+    }
+
+    return (data as LocationWithDetails[]) || [];
+  } catch (err: any) {
+    console.error('Unexpected error in fetchApprovedLocations:', err);
+    return [];
   }
 }
