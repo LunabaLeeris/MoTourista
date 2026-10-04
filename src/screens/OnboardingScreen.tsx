@@ -18,7 +18,8 @@ import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
 import { DriverTypeRow, VehicleTypeRow, MotorcycleModelRow } from '../types/database';
 import { getCurrentRiderLocation } from '../services/locationService';
-import { isLocalUri, uploadAvatar, pickImageFromLibrary } from '../services/imageService';
+import { uploadAvatar, pickImageFromLibrary } from '../services/imageService';
+import { isLocalUri } from '../lib/image';
 import { getLookupOptions } from '../services/lookupService';
 
 export default function OnboardingScreen() {

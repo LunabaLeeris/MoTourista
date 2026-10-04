@@ -1,6 +1,9 @@
+import { LocationWithDetails } from './database';
+
 // Route parameter list definitions for application navigation.
 
 export type MainTabParamList = {
+  Maps: undefined;
   Posts: undefined;
   Profile: undefined;
   Visit: undefined;
@@ -13,5 +16,6 @@ export type RootStackParamList = {
   CreatePost: undefined;
   ProfilePreview?: undefined;
   EditProfile: undefined;
+  PostDetail: { post: LocationWithDetails };
 };
 

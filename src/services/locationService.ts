@@ -1,85 +1,8 @@
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
-
-// Coordinate representation for geographic positions.
-export interface Coordinates {
-  latitude: number;
-  longitude: number;
-}
-
-// Complete rider location result with geographic coordinates and text address.
-export interface LocationResult {
-  latitude: number;
-  longitude: number;
-  readableLocation: string;
-}
-
-// Guard clause to validate that latitude and longitude coordinates are valid geographic numbers.
-export function validateCoordinates(latitude: number, longitude: number): void {
-  if (
-    latitude === undefined ||
-    latitude === null ||
-    isNaN(latitude) ||
-    latitude < -90 ||
-    latitude > 90
-  ) {
-    throw new Error('Valid latitude between -90 and 90 is required.');
-  }
-
-  if (
-    longitude === undefined ||
-    longitude === null ||
-    isNaN(longitude) ||
-    longitude < -180 ||
-    longitude > 180
-  ) {
-    throw new Error('Valid longitude between -180 and 180 is required.');
-  }
-}
-
-// Check whether given coordinates fall within valid geographic boundaries.
-export function isValidCoordinates(
-  latitude?: number | null,
-  longitude?: number | null
-): boolean {
-  if (
-    latitude === undefined ||
-    latitude === null ||
-    isNaN(latitude) ||
-    latitude < -90 ||
-    latitude > 90
-  ) {
-    return false;
-  }
-
-  if (
-    longitude === undefined ||
-    longitude === null ||
-    isNaN(longitude) ||
-    longitude < -180 ||
-    longitude > 180
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-// Structure of OpenStreetMap reverse geocoding API response.
-interface NominatimAddress {
-  city?: string;
-  town?: string;
-  municipality?: string;
-  county?: string;
-  state?: string;
-  region?: string;
-  country?: string;
-}
-
-interface NominatimResponse {
-  address?: NominatimAddress;
-  display_name?: string;
-}
+import { supabase } from '../lib/supabase';
+import { NominatimResponse, LocationResult } from '../types/location'
+import { VisitedLocation } from '../types/map';
 
 // Convert coordinates to a readable city and region text string.
 export async function reverseGeocodeCoordinates(
@@ -193,4 +116,77 @@ export async function getCurrentRiderLocation(): Promise<LocationResult> {
     longitude,
     readableLocation,
   };
+}
+
+// Fetch every distinct location the user has visited, newest visit first.
+// Repeat visits to the same location are merged into one entry with a visit count.
+export async function fetchVisitedLocations(userId: string): Promise<VisitedLocation[]> {
+  if (!userId) return [];
+
+  const { data, error } = await supabase
+    .from('location_visits')
+    .select(
+      `
+      id,
+      visited_at,
+      notes,
+      locations (
+        id,
+        title,
+        address,
+        latitude,
+        longitude,
+        status_id,
+        location_tags (
+          tags (
+            id,
+            name,
+            icon
+          )
+        )
+      )
+    `
+    )
+    .eq('user_id', userId)
+    .order('visited_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to load visited locations.');
+  }
+
+  const byLocation = new Map<string, VisitedLocation>();
+
+  for (const visit of (data as any[]) || []) {
+    // The joined location can be returned as an object or a single-item array.
+    const loc = Array.isArray(visit.locations) ? visit.locations[0] : visit.locations;
+    if (!loc || loc.latitude == null || loc.longitude == null) continue;
+
+    const existing = byLocation.get(loc.id);
+    if (existing) {
+      // Rows are sorted newest first, so the first one seen is the latest visit.
+      existing.visitCount += 1;
+      continue;
+    }
+
+    const firstTag = loc.location_tags?.[0]?.tags;
+    const tag = Array.isArray(firstTag) ? firstTag[0] : firstTag;
+
+    byLocation.set(loc.id, {
+      id: loc.id,
+      title: loc.title || 'Visited Spot',
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      tagId: tag?.id,
+      tagName: tag?.name,
+      tagIcon: tag?.icon,
+      address: loc.address || undefined,
+      isApproved: loc.status_id === 'approved',
+      latestVisitId: visit.id,
+      latestVisitedAt: visit.visited_at,
+      visitCount: 1,
+      notes: visit.notes || undefined,
+    });
+  }
+
+  return Array.from(byLocation.values());
 }

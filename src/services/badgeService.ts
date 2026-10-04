@@ -1,11 +1,11 @@
 import { supabase } from '../lib/supabase';
 import { BadgeRow, BadgeWithProgress, UserBadgeProgressRow } from '../types/database';
+import { BadgeCriteriaTuple } from '../types/badge';
 import {
-  BadgeCriteriaTuple,
   parseCriteriaTuples,
   calculateTotalTarget,
   parseProgressData,
-} from './badgeCriteriaParser';
+} from '../lib/badgeParser';
 
 /**
  * Checks if a specific tag_id exists in the tags table.
@@ -142,8 +142,8 @@ export async function fetchBadgesWithProgress(
         badge.criteria_data,
         validTagIds.size > 0 ? validTagIds : undefined
       );
-      const calculatedTarget = calculateTotalTarget(tuples);
 
+      const calculatedTarget = calculateTotalTarget(tuples);
       const targetProgress = progress?.target_progress ?? calculatedTarget;
       const isUnlocked = Boolean(progress?.is_unlocked);
       let currentProgress = progress?.current_progress ?? (isUnlocked ? targetProgress : 0);

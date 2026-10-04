@@ -5,16 +5,18 @@ import { MainTabParamList } from '../types/navigation';
 import ProfilePreviewScreen from '../screens/ProfilePreviewScreen';
 import VisitScreen from '../screens/VisitScreen';
 import PostsScreen from '../screens/PostsScreen';
+import MapsScreen from '../screens/MapsScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 /**
- * Bottom navigation bar for primary app sections: Posts, Profile, and Visit testing.
+ * Bottom navigation bar for primary app sections: Maps, Posts, Profile, and Visit testing.
  * Provides intuitive, standard mobile tab navigation.
  */
 export default function MainTabNavigator() {
   return (
     <Tab.Navigator
+      initialRouteName="Maps"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#000000',
@@ -33,6 +35,20 @@ export default function MainTabNavigator() {
         },
       }}
     >
+      <Tab.Screen
+        name="Maps"
+        component={MapsScreen}
+        options={{
+          tabBarLabel: 'Maps',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'map' : 'map-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
       <Tab.Screen
         name="Posts"
         component={PostsScreen}

@@ -1,11 +1,9 @@
+import { ImageUploadPayload } from '../types/image';
 import { supabase } from '../lib/supabase';
 import { LocationWithDetails } from '../types/database';
-import {
-  ImageUploadPayload,
-  uploadImageToStorage,
-  getExtensionFromMimeOrUri,
-} from './imageService';
-import { validateCoordinates } from './locationService';
+import { uploadImageToStorage, } from './imageService';
+import { getExtensionFromMimeOrUri } from '../lib/image';
+import { validateCoordinates } from '../lib/locationValidator';
 
 // Input payload for uploaded post photos, reusing ImageUploadPayload from imageService.
 export type PostImageInput = ImageUploadPayload;
@@ -300,4 +298,174 @@ export async function deletePost(
     console.error('Unexpected error in deletePost:', err);
     return { success: false, error: err };
   }
+}
+
+// Fetch all locations to display as markers on the map.
+// [WARNING] find way to memoize this 
+export async function fetchApprovedLocations(): Promise<LocationWithDetails[]> {
+  try {
+    const { data, error } = await supabase
+      .from('locations')
+      .select(`
+        *,
+        location_statuses (*),
+        location_images (*),
+        location_tags (
+          *,
+          tags (*)
+        ),
+        location_hearts (*),
+        location_visits (*),
+        profiles:profiles!created_by (*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch approved locations:', error.message);
+      return [];
+    }
+
+    return (data as LocationWithDetails[]) || [];
+  } catch (err: any) {
+    console.error('Unexpected error in fetchApprovedLocations:', err);
+    return [];
+  }
+}
+
+/**
+ * Sum all rows in location_hearts to get how many hearts a single location post has.
+ */
+export async function fetchLocationHeartCount(locationId: string): Promise<number> {
+  if (!locationId) {
+    return 0;
+  }
+
+  try {
+    const { count, error } = await supabase
+      .from('location_hearts')
+      .select('*', { count: 'exact', head: true })
+      .eq('location_id', locationId);
+
+    if (error) {
+      console.error('Failed to fetch location heart count:', error.message);
+      return 0;
+    }
+
+    return count || 0;
+  } catch (err: any) {
+    console.error('Unexpected error in fetchLocationHeartCount:', err);
+    return 0;
+  }
+}
+
+/**
+ * Check if a specific user has hearted a location.
+ */
+export async function checkUserHeartedLocation(
+  locationId: string,
+  userId: string
+): Promise<boolean> {
+  if (!locationId || !userId) {
+    return false;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('location_hearts')
+      .select('user_id')
+      .eq('location_id', locationId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Failed to check user heart status:', error.message);
+      return false;
+    }
+
+    return Boolean(data);
+  } catch (err: any) {
+    console.error('Unexpected error in checkUserHeartedLocation:', err);
+    return false;
+  }
+}
+
+/**
+ * Insert a heart record for a location post.
+ */
+export async function heartLocation(
+  locationId: string,
+  userId: string
+): Promise<boolean> {
+  if (!locationId || !userId) {
+    throw new Error('Location ID and User ID are required to heart a post.');
+  }
+
+  const { error } = await supabase
+    .from('location_hearts')
+    .insert({
+      location_id: locationId,
+      user_id: userId,
+    });
+
+  if (error) {
+    console.error('Failed to insert location heart:', error.message);
+    throw new Error(error.message);
+  }
+
+  return true;
+}
+
+/**
+ * Remove a heart record for a location post.
+ */
+export async function unheartLocation(
+  locationId: string,
+  userId: string
+): Promise<boolean> {
+  if (!locationId || !userId) {
+    throw new Error('Location ID and User ID are required to unheart a post.');
+  }
+
+  const { error } = await supabase
+    .from('location_hearts')
+    .delete()
+    .eq('location_id', locationId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Failed to remove location heart:', error.message);
+    throw new Error(error.message);
+  }
+
+  return true;
+}
+
+/**
+ * Toggle heart for a location:
+ * If user already hearted, remove the row.
+ * If not, insert user_id and location_id into location_hearts.
+ * Returns the new isHearted status and total heart count.
+ */
+export async function toggleLocationHeart(
+  locationId: string,
+  userId: string
+): Promise<{ isHearted: boolean; heartCount: number }> {
+  if (!locationId || !userId) {
+    throw new Error('Location ID and User ID are required to toggle heart.');
+  }
+
+  const isCurrentlyHearted = await checkUserHeartedLocation(locationId, userId);
+
+  if (isCurrentlyHearted) {
+    await unheartLocation(locationId, userId);
+  } else {
+    await heartLocation(locationId, userId);
+  }
+
+  const heartCount = await fetchLocationHeartCount(locationId);
+
+  return {
+    isHearted: !isCurrentlyHearted,
+    heartCount,
+  };
 }

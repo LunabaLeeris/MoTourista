@@ -4,6 +4,11 @@ import {
   fetchPostById,
   deletePost,
   uploadLocationPhoto,
+  fetchLocationHeartCount,
+  checkUserHeartedLocation,
+  heartLocation,
+  unheartLocation,
+  toggleLocationHeart,
   CreatePostParams,
 } from '../postService';
 import { supabase } from '../../lib/supabase';
@@ -545,6 +550,194 @@ describe('postService', () => {
       await expect(
         uploadLocationPhoto('file:///test.jpg', 'user-123', 'loc-123', 'dGVzdA==')
       ).rejects.toThrow('Location photo upload failed: Storage quota reached');
+    });
+  });
+
+  describe('fetchLocationHeartCount', () => {
+    it('returns 0 if locationId is missing', async () => {
+      const count = await fetchLocationHeartCount('');
+      expect(count).toBe(0);
+    });
+
+    it('returns exact count of hearts when query succeeds', async () => {
+      const eqMock = jest.fn().mockResolvedValue({ count: 7, error: null });
+      const selectMock = jest.fn().mockReturnValue({ eq: eqMock });
+      (supabase.from as jest.Mock).mockReturnValue({ select: selectMock });
+
+      const count = await fetchLocationHeartCount('loc-123');
+
+      expect(supabase.from).toHaveBeenCalledWith('location_hearts');
+      expect(selectMock).toHaveBeenCalledWith('*', { count: 'exact', head: true });
+      expect(eqMock).toHaveBeenCalledWith('location_id', 'loc-123');
+      expect(count).toBe(7);
+    });
+
+    it('returns 0 and logs error when Supabase encounters an error', async () => {
+      const eqMock = jest.fn().mockResolvedValue({
+        count: null,
+        error: { message: 'Database error' },
+      });
+      const selectMock = jest.fn().mockReturnValue({ eq: eqMock });
+      (supabase.from as jest.Mock).mockReturnValue({ select: selectMock });
+
+      const count = await fetchLocationHeartCount('loc-123');
+
+      expect(count).toBe(0);
+      expect(console.error).toHaveBeenCalledWith(
+        'Failed to fetch location heart count:',
+        'Database error'
+      );
+    });
+  });
+
+  describe('checkUserHeartedLocation', () => {
+    it('returns false if locationId or userId is empty', async () => {
+      expect(await checkUserHeartedLocation('', 'user-123')).toBe(false);
+      expect(await checkUserHeartedLocation('loc-123', '')).toBe(false);
+    });
+
+    it('returns true when user has hearted location', async () => {
+      const maybeSingleMock = jest.fn().mockResolvedValue({
+        data: { user_id: 'user-123' },
+        error: null,
+      });
+      const eqUserMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+      const eqLocMock = jest.fn().mockReturnValue({ eq: eqUserMock });
+      const selectMock = jest.fn().mockReturnValue({ eq: eqLocMock });
+      (supabase.from as jest.Mock).mockReturnValue({ select: selectMock });
+
+      const isHearted = await checkUserHeartedLocation('loc-123', 'user-123');
+
+      expect(supabase.from).toHaveBeenCalledWith('location_hearts');
+      expect(selectMock).toHaveBeenCalledWith('user_id');
+      expect(eqLocMock).toHaveBeenCalledWith('location_id', 'loc-123');
+      expect(eqUserMock).toHaveBeenCalledWith('user_id', 'user-123');
+      expect(isHearted).toBe(true);
+    });
+
+    it('returns false when user has not hearted location', async () => {
+      const maybeSingleMock = jest.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const eqUserMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+      const eqLocMock = jest.fn().mockReturnValue({ eq: eqUserMock });
+      const selectMock = jest.fn().mockReturnValue({ eq: eqLocMock });
+      (supabase.from as jest.Mock).mockReturnValue({ select: selectMock });
+
+      const isHearted = await checkUserHeartedLocation('loc-123', 'user-123');
+      expect(isHearted).toBe(false);
+    });
+  });
+
+  describe('heartLocation and unheartLocation', () => {
+    it('throws error when locationId or userId is missing in heartLocation', async () => {
+      await expect(heartLocation('', 'user-123')).rejects.toThrow(
+        'Location ID and User ID are required to heart a post.'
+      );
+      await expect(heartLocation('loc-123', '')).rejects.toThrow(
+        'Location ID and User ID are required to heart a post.'
+      );
+    });
+
+    it('inserts heart row successfully in heartLocation', async () => {
+      const insertMock = jest.fn().mockResolvedValue({ error: null });
+      (supabase.from as jest.Mock).mockReturnValue({ insert: insertMock });
+
+      const result = await heartLocation('loc-123', 'user-123');
+
+      expect(supabase.from).toHaveBeenCalledWith('location_hearts');
+      expect(insertMock).toHaveBeenCalledWith({
+        location_id: 'loc-123',
+        user_id: 'user-123',
+      });
+      expect(result).toBe(true);
+    });
+
+    it('throws error when unheartLocation is missing parameters', async () => {
+      await expect(unheartLocation('', 'user-123')).rejects.toThrow(
+        'Location ID and User ID are required to unheart a post.'
+      );
+    });
+
+    it('deletes heart row successfully in unheartLocation', async () => {
+      const eqUserMock = jest.fn().mockResolvedValue({ error: null });
+      const eqLocMock = jest.fn().mockReturnValue({ eq: eqUserMock });
+      const deleteMock = jest.fn().mockReturnValue({ eq: eqLocMock });
+      (supabase.from as jest.Mock).mockReturnValue({ delete: deleteMock });
+
+      const result = await unheartLocation('loc-123', 'user-123');
+
+      expect(supabase.from).toHaveBeenCalledWith('location_hearts');
+      expect(eqLocMock).toHaveBeenCalledWith('location_id', 'loc-123');
+      expect(eqUserMock).toHaveBeenCalledWith('user_id', 'user-123');
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('toggleLocationHeart', () => {
+    it('throws error if parameters are missing', async () => {
+      await expect(toggleLocationHeart('', 'user-123')).rejects.toThrow(
+        'Location ID and User ID are required to toggle heart.'
+      );
+    });
+
+    it('inserts heart when not currently hearted and returns updated count', async () => {
+      // 1. checkUserHeartedLocation -> false
+      const maybeSingleMock = jest.fn().mockResolvedValue({ data: null, error: null });
+      const eqUserMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+      const eqLocMock = jest.fn().mockReturnValue({ eq: eqUserMock });
+      const selectMock = jest.fn().mockReturnValue({ eq: eqLocMock });
+
+      // 2. heartLocation -> insert
+      const insertMock = jest.fn().mockResolvedValue({ error: null });
+
+      // 3. fetchLocationHeartCount -> count: 4
+      const countEqMock = jest.fn().mockResolvedValue({ count: 4, error: null });
+      const countSelectMock = jest.fn().mockReturnValue({ eq: countEqMock });
+
+      (supabase.from as jest.Mock)
+        .mockReturnValueOnce({ select: selectMock }) // check
+        .mockReturnValueOnce({ insert: insertMock }) // insert
+        .mockReturnValueOnce({ select: countSelectMock }); // count
+
+      const result = await toggleLocationHeart('loc-123', 'user-123');
+
+      expect(result).toEqual({ isHearted: true, heartCount: 4 });
+      expect(insertMock).toHaveBeenCalledWith({
+        location_id: 'loc-123',
+        user_id: 'user-123',
+      });
+    });
+
+    it('removes heart when currently hearted and returns updated count', async () => {
+      // 1. checkUserHeartedLocation -> true
+      const maybeSingleMock = jest.fn().mockResolvedValue({
+        data: { user_id: 'user-123' },
+        error: null,
+      });
+      const eqUserMock = jest.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+      const eqLocMock = jest.fn().mockReturnValue({ eq: eqUserMock });
+      const selectMock = jest.fn().mockReturnValue({ eq: eqLocMock });
+
+      // 2. unheartLocation -> delete
+      const delUserEq = jest.fn().mockResolvedValue({ error: null });
+      const delLocEq = jest.fn().mockReturnValue({ eq: delUserEq });
+      const deleteMock = jest.fn().mockReturnValue({ eq: delLocEq });
+
+      // 3. fetchLocationHeartCount -> count: 3
+      const countEqMock = jest.fn().mockResolvedValue({ count: 3, error: null });
+      const countSelectMock = jest.fn().mockReturnValue({ eq: countEqMock });
+
+      (supabase.from as jest.Mock)
+        .mockReturnValueOnce({ select: selectMock }) // check
+        .mockReturnValueOnce({ delete: deleteMock }) // delete
+        .mockReturnValueOnce({ select: countSelectMock }); // count
+
+      const result = await toggleLocationHeart('loc-123', 'user-123');
+
+      expect(result).toEqual({ isHearted: false, heartCount: 3 });
+      expect(deleteMock).toHaveBeenCalled();
     });
   });
 });

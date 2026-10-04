@@ -7,6 +7,7 @@ import { RootStackParamList } from '../types/navigation';
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
 import MainTabNavigator from './MainTabNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +36,7 @@ export function RootNavigator() {
             <Stack.Screen name="MainTabs" component={MainTabNavigator} />
             <Stack.Screen name="EditProfile" component={OnboardingScreen} />
             <Stack.Screen name="CreatePost" component={CreatePostScreen} />
+            <Stack.Screen name="PostDetail" component={PostDetailScreen} />
           </>
         )}
       </Stack.Navigator>
