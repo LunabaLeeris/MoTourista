@@ -20,6 +20,14 @@ export interface MapMarker {
   isApproved?: boolean;
 }
 
+// A location a user has visited, with details of their most recent visit.
+export interface VisitedLocation extends MapMarker {
+  latestVisitId: string;
+  latestVisitedAt: string;
+  visitCount: number;
+  notes?: string;
+}
+
 // Result of a calculated route polyline with distance and duration.
 export interface RouteResult {
   coordinates: Coordinates[];
@@ -41,6 +49,8 @@ export interface MoTouristaMapRef {
 export interface MoTouristaMapProps {
   markers?: MapMarker[];
   userLocation?: Coordinates | null;
+  initialCenter?: Coordinates;
+  initialZoom?: number;
   selectedMarkerId?: string | null;
   onMarkerPress?: (marker: MapMarker) => void;
   onMapPress?: () => void;

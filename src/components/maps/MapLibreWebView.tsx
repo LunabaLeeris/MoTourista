@@ -30,6 +30,8 @@ const MapLibreWebView = forwardRef<MoTouristaMapRef, MoTouristaMapProps>(
     {
       markers = [],
       userLocation,
+      initialCenter,
+      initialZoom,
       selectedMarkerId,
       onMarkerPress,
       onMapPress,
@@ -42,8 +44,11 @@ const MapLibreWebView = forwardRef<MoTouristaMapRef, MoTouristaMapProps>(
     const [isLoaded, setIsLoaded] = useState(false);
 
     // Initial center coordinates
-    const initialLat = userLocation?.latitude || DEFAULT_MANILA_COORDINATES.latitude;
-    const initialLng = userLocation?.longitude || DEFAULT_MANILA_COORDINATES.longitude;
+    const initialLat =
+      initialCenter?.latitude ?? (userLocation?.latitude || DEFAULT_MANILA_COORDINATES.latitude);
+    const initialLng =
+      initialCenter?.longitude ?? (userLocation?.longitude || DEFAULT_MANILA_COORDINATES.longitude);
+    const defaultZoom = initialZoom ?? ACTIVE_MAP_CONFIG.zoom.default;
     const styleUrl = getMapStyleUrl(ACTIVE_MAP_CONFIG);
 
     // Post structured JSON action to MapLibre GL JS inside the WebView
@@ -63,7 +68,7 @@ const MapLibreWebView = forwardRef<MoTouristaMapRef, MoTouristaMapProps>(
           bounds: ACTIVE_MAP_CONFIG.bounds,
           minZoom: ACTIVE_MAP_CONFIG.zoom.min,
           maxZoom: ACTIVE_MAP_CONFIG.zoom.max,
-          defaultZoom: ACTIVE_MAP_CONFIG.zoom.default,
+          defaultZoom: defaultZoom,
           paintUpdates: getStylePaintEnhancements(),
           sources: getCustomMapSources(),
           layers: getCustomMapLayers(POI_CONFIG, OSM_DEFAULT_SPRITE_ICONS),
@@ -72,7 +77,7 @@ const MapLibreWebView = forwardRef<MoTouristaMapRef, MoTouristaMapProps>(
           poiCategoryMap: POI_CONFIG,
         },
       });
-    }, [styleUrl, initialLng, initialLat, sendAction]);
+    }, [styleUrl, initialLng, initialLat, defaultZoom, sendAction]);
 
     // Expose imperative map controls to parent components
     useImperativeHandle(ref, () => ({
