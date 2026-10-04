@@ -95,13 +95,45 @@ export function getMapRuntimeScript(): string {
 
   // Render custom POI markers
   win.updateMapMarkers = function (markers, selectedId) {
-    currentMarkers.forEach(function (m) { m.remove(); });
-    currentMarkers = [];
     if (!win.mapInstance) return;
 
+    // Fast-path: When marker list is identical and only selectedId changed,
+    // update classes without re-creating DOM elements or MapLibre markers.
+    var canReuse = currentMarkers.length === markers.length && currentMarkers.every(function (item, idx) {
+      return item.id === markers[idx].id;
+    });
+
+    if (canReuse) {
+      currentMarkers.forEach(function (item) {
+        var isSelected = item.id === selectedId;
+        if (item.wrapper) {
+          if (isSelected) {
+            item.wrapper.classList.add('selected');
+          } else {
+            item.wrapper.classList.remove('selected');
+          }
+        }
+      });
+      return;
+    }
+
+    currentMarkers.forEach(function (m) {
+      if (m && m.marker) {
+        m.marker.remove();
+      } else if (m && typeof m.remove === 'function') {
+        m.remove();
+      }
+    });
+    currentMarkers = [];
+
     markers.forEach(function (poi) {
-      var el = document.createElement('div');
-      el.className = 'poi-pin' + (poi.id === selectedId ? ' selected' : '');
+      var isSelected = poi.id === selectedId;
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'poi-marker-container' + (isSelected ? ' selected' : '');
+
+      var pin = document.createElement('div');
+      pin.className = 'poi-pin';
 
       var rawTag = (poi.tagName || '').toLowerCase().trim().replace(/\\s+/g, '_');
       var matchedRule = categoryColorMap[rawTag];
@@ -112,14 +144,16 @@ export function getMapRuntimeScript(): string {
         if (foundKey) matchedRule = categoryColorMap[foundKey];
       }
 
-      el.style.background = matchedRule ? matchedRule.color : defaultPinBackground;
+      pin.style.background = matchedRule ? matchedRule.color : defaultPinBackground;
 
       var inner = document.createElement('div');
       inner.className = 'poi-pin-inner';
       inner.innerText = pinEmoji;
-      el.appendChild(inner);
+      pin.appendChild(inner);
 
-      el.addEventListener('click', function (e) {
+      wrapper.appendChild(pin);
+
+      wrapper.addEventListener('click', function (e) {
         e.stopPropagation();
         if (win.ReactNativeWebView) {
           win.ReactNativeWebView.postMessage(
@@ -128,11 +162,15 @@ export function getMapRuntimeScript(): string {
         }
       });
 
-      var marker = new maplibregl.Marker({ element: el })
+      var marker = new maplibregl.Marker({ element: wrapper })
         .setLngLat([poi.longitude, poi.latitude])
         .addTo(win.mapInstance);
 
-      currentMarkers.push(marker);
+      currentMarkers.push({
+        id: poi.id,
+        marker: marker,
+        wrapper: wrapper
+      });
     });
   };
 

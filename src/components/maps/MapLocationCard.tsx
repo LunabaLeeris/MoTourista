@@ -4,124 +4,126 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MapMarker, RouteResult } from '../../types/map';
 import { Coordinates } from '../../types/location';
-import { getFormattedDistance } from '../../lib/distance';
-import { formatRouteDuration } from '../../lib/markers';
+import { LocationWithDetails } from '../../types/database';
+import { PostDetailContent } from '../../screens/PostDetailScreen';
 
 export interface MapLocationCardProps {
   location: MapMarker;
+  post?: LocationWithDetails | null;
   userLocation: Coordinates | null;
   activeRoute: RouteResult | null;
   isRouting: boolean;
   onStartNavigation: () => void;
   onClearNavigation: () => void;
+  onClose?: () => void;
 }
 
 /**
- * Bottom card displaying the selected map spot's details and routing actions.
- * Styled using Tailwind CSS utility classes.
+ * Bottom drawer displaying the selected map spot's post details,
+ * Reviews/Visitors tabs, and top-right navigation action button.
  */
 export default function MapLocationCard({
   location,
-  userLocation,
+  post,
   activeRoute,
   isRouting,
   onStartNavigation,
   onClearNavigation,
+  onClose,
 }: MapLocationCardProps) {
-  const bottomPaddingClass = Platform.OS === 'ios' ? 'pb-8' : 'pb-5';
+  const handleClose = onClose || onClearNavigation;
+
+  // Build a fallback LocationWithDetails object if full database post was not passed
+  const displayPost: LocationWithDetails = (post || {
+    id: location.id,
+    title: location.title,
+    description: '',
+    address: location.address || '',
+    latitude: location.latitude,
+    longitude: location.longitude,
+    status_id: location.isApproved ? 'approved' : 'pending',
+    created_by: '',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    location_images: location.imageUrl
+      ? [
+          {
+            id: `${location.id}-img`,
+            location_id: location.id,
+            image_url: location.imageUrl,
+            caption: '',
+            display_order: 1,
+            created_at: new Date().toISOString(),
+          },
+        ]
+      : [],
+    location_tags: location.tagName
+      ? [
+          {
+            location_id: location.id,
+            tag_id: location.tagId || 'tag-1',
+            description: '',
+            created_at: new Date().toISOString(),
+            tags: {
+              id: location.tagId || 'tag-1',
+              name: location.tagName,
+              icon: location.tagIcon || 'tag-outline',
+              display_order: 1,
+              created_at: new Date().toISOString(),
+            },
+          },
+        ]
+      : [],
+    location_hearts: [],
+    location_visits: [],
+  }) as LocationWithDetails;
 
   return (
     <View
-      className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-[20px] px-5 pt-4.5 ${bottomPaddingClass} shadow-xl elevation-10 z-30`}
+      style={{ height: '78%' }}
+      className="absolute bottom-0 left-0 right-0 bg-[#EBE7E5] rounded-t-[32px] overflow-hidden shadow-2xl elevation-30 z-40 border-t border-neutral-300"
     >
-      {/* Title & Tag Header */}
-      <View className="flex-row items-start justify-between mb-2">
-        <View className="flex-1 flex-row items-center flex-wrap gap-2">
-          <Text className="text-lg font-bold text-slate-900">{location.title}</Text>
-          {location.tagName && (
-            <View className="px-2 py-0.5 bg-rose-100 rounded-md">
-              <Text className="text-[11px] font-semibold text-rose-600">
-                {location.tagName}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <TouchableOpacity onPress={onClearNavigation} className="p-1 ml-2">
-          <MaterialCommunityIcons name="close" size={20} color="#64748b" />
-        </TouchableOpacity>
+      {/* Top Drag Handle Indicator */}
+      <View className="items-center pt-2.5 pb-0.5">
+        <View className="w-10 h-1 bg-neutral-400/60 rounded-full" />
       </View>
 
-      {/* Address */}
-      {location.address && (
-        <Text className="text-[13px] text-slate-500 mb-3 leading-[18px]" numberOfLines={2}>
-          {location.address}
-        </Text>
-      )}
-
-      {/* Distance & Active Route Duration */}
-      <View className="flex-row items-center gap-3 mb-4">
-        <View className="flex-row items-center gap-1 bg-sky-50 px-2.5 py-1 rounded-md">
-          <MaterialCommunityIcons name="map-marker-distance" size={16} color="#0284c7" />
-          <Text className="text-xs font-semibold text-[#0284c7]">
-            {getFormattedDistance(userLocation, location)} away
-          </Text>
-        </View>
-
-        {activeRoute && (
-          <View className="flex-row items-center gap-1 bg-green-50 px-2.5 py-1 rounded-md">
-            <MaterialCommunityIcons name="motorbike" size={16} color="#16a34a" />
-            <Text className="text-xs font-semibold text-[#16a34a]">
-              {formatRouteDuration(activeRoute.durationSeconds)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Action Button: Navigate / End Route */}
-      <View className="flex-row gap-2.5">
-        {activeRoute ? (
+      {/* Post Detail Content with Top-Right Navigate Route Button */}
+      <PostDetailContent
+        post={displayPost}
+        onBack={handleClose}
+        headerPaddingTopClass="pt-1"
+        rightAction={
           <TouchableOpacity
-            className="flex-1 h-[46px] bg-slate-500 rounded-lg flex-row items-center justify-center shadow-md elevation-4"
-            onPress={onClearNavigation}
-          >
-            <MaterialCommunityIcons
-              name="cancel"
-              size={18}
-              color="#ffffff"
-              className="mr-1.5"
-            />
-            <Text className="text-white text-[15px] font-semibold">End Route</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            className="flex-1 h-[46px] bg-[#e11d48] rounded-lg flex-row items-center justify-center shadow-md elevation-4"
-            onPress={onStartNavigation}
+            onPress={activeRoute ? onClearNavigation : onStartNavigation}
             disabled={isRouting}
+            activeOpacity={0.8}
+            className={`flex-row items-center px-4 py-2 rounded-full shadow-md ${
+              activeRoute ? 'bg-slate-700' : 'bg-[#E11D48]'
+            }`}
           >
             {isRouting ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
                 <MaterialCommunityIcons
-                  name="navigation-variant"
-                  size={18}
-                  color="#ffffff"
-                  className="mr-1.5"
+                  name={activeRoute ? 'cancel' : 'navigation-variant'}
+                  size={16}
+                  color="#FFFFFF"
+                  className="mr-1"
                 />
-                <Text className="text-white text-[15px] font-semibold">
-                  Navigate Route
+                <Text className="text-white text-xs font-bold ml-1">
+                  {activeRoute ? 'End Route' : 'Navigate'}
                 </Text>
               </>
             )}
           </TouchableOpacity>
-        )}
-      </View>
+        }
+      />
     </View>
   );
 }

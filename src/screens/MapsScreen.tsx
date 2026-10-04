@@ -193,11 +193,13 @@ export default function MapsScreen() {
       {selectedLocation && viewMode === 'map' && (
         <MapLocationCard
           location={selectedLocation}
+          post={rawLocations.find((l) => l.id === selectedLocation.id)}
           userLocation={userLocation}
           activeRoute={activeRoute}
           isRouting={isRouting}
           onStartNavigation={handleStartNavigation}
           onClearNavigation={handleClearNavigation}
+          onClose={() => setSelectedLocation(null)}
         />
       )}
     </View>

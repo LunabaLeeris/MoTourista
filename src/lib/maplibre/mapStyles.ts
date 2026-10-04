@@ -12,6 +12,12 @@ export function generateMapCss(config = MAP_STYLE_CONFIG): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body, #map { width: 100%; height: 100%; background: #0c1017; overflow: hidden; }
 
+    /* MapLibre marker override to guarantee instant repositioning with zero delay */
+    .maplibregl-marker {
+      transition: none !important;
+      will-change: transform;
+    }
+
     /* Rider user location marker */
     .rider-marker {
       width: ${riderMarker.size}px;
@@ -21,6 +27,8 @@ export function generateMapCss(config = MAP_STYLE_CONFIG): string {
       border: ${riderMarker.borderWidth}px solid ${riderMarker.borderColor};
       box-shadow: ${riderMarker.glowShadow};
       position: relative;
+      will-change: transform;
+      transition: none !important;
     }
     .rider-marker::after {
       content: '';
@@ -35,7 +43,25 @@ export function generateMapCss(config = MAP_STYLE_CONFIG): string {
       100% { transform: scale(2.2); opacity: 0; }
     }
 
-    /* POI custom pin */
+    /* POI marker container element directly positioned by MapLibre */
+    .poi-marker-container {
+      width: ${poiPin.width}px;
+      height: ${poiPin.height}px;
+      cursor: pointer;
+      will-change: transform;
+      pointer-events: auto;
+      transition: none !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .poi-marker-container.selected {
+      z-index: 999;
+    }
+
+    /* POI custom pin - nested inside container, keeping fixed rotation without MapLibre overwriting it */
     .poi-pin {
       display: flex;
       align-items: center;
@@ -48,13 +74,13 @@ export function generateMapCss(config = MAP_STYLE_CONFIG): string {
       border: ${poiPin.borderWidth}px solid ${poiPin.borderColor};
       box-shadow: ${poiPin.boxShadow};
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      will-change: transform;
+      transition: box-shadow 0.15s ease, background 0.15s ease;
     }
-    .poi-pin.selected {
+    .poi-marker-container.selected .poi-pin {
       background: ${poiPin.selectedBackground};
       transform: rotate(-45deg) scale(${poiPin.selectedScale});
       box-shadow: ${poiPin.selectedGlowShadow};
-      z-index: 999;
     }
     .poi-pin-inner {
       transform: rotate(45deg);
@@ -65,6 +91,9 @@ export function generateMapCss(config = MAP_STYLE_CONFIG): string {
       display: flex;
       align-items: center;
       justify-content: center;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     /* Restricted zone indicator badge */
@@ -80,6 +109,8 @@ export function generateMapCss(config = MAP_STYLE_CONFIG): string {
       pointer-events: none;
       backdrop-filter: blur(${restrictedBadge.backdropBlur}px);
       -webkit-backdrop-filter: blur(${restrictedBadge.backdropBlur}px);
+      will-change: transform;
+      transition: none !important;
     }
     .restricted-badge-title {
       font-size: 11px;

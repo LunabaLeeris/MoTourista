@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Alert,
+  Modal,
+  StatusBar,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LocationWithDetails, LocationHeartRow } from '../../types/database';
@@ -20,6 +22,7 @@ import PostBadge from './PostBadge';
 export interface PostPanelProps {
   item: LocationWithDetails;
   avatarUrl?: string | null;
+  onPress?: (post: LocationWithDetails) => void;
   onDeleted?: (postId: string) => void;
   onDelete?: (post: LocationWithDetails) => void;
   currentUserId?: string;
@@ -34,6 +37,7 @@ export interface PostPanelProps {
 export default function PostPanel({
   item,
   avatarUrl,
+  onPress,
   onDeleted,
   onDelete,
   currentUserId: propUserId,
@@ -44,9 +48,14 @@ export default function PostPanel({
   const { user } = useAuth();
   const currentUserId = propUserId || user?.id || '';
 
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Full-screen image viewer state
+  const [isFullScreenVisible, setIsFullScreenVisible] = useState(false);
+  const [fullScreenIndex, setFullScreenIndex] = useState(0);
+  const fullScreenScrollRef = useRef<ScrollView>(null);
 
   // Self-contained heart and delete state
   const [hearts, setHearts] = useState<LocationHeartRow[]>(item.location_hearts || []);
@@ -86,6 +95,24 @@ export default function PostPanel({
       }
     }
   };
+
+  const handleOpenFullScreen = (index: number) => {
+    if (images.length === 0) return;
+    setFullScreenIndex(index);
+    setIsFullScreenVisible(true);
+  };
+
+  useEffect(() => {
+    if (isFullScreenVisible && images.length > 1) {
+      const timer = setTimeout(() => {
+        fullScreenScrollRef.current?.scrollTo({
+          x: fullScreenIndex * windowWidth,
+          animated: false,
+        });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullScreenVisible]);
 
   const handleHeartPress = async () => {
     if (onToggleHeart) {
@@ -216,7 +243,12 @@ export default function PostPanel({
     <View className="bg-white rounded-2xl mb-5 overflow-hidden border border-neutral-200 shadow-sm">
       {/* Top Header Row of the Card */}
       <View className="flex-row items-center justify-between p-3 bg-[#E8EDE5]">
-        <View className="flex-row items-center flex-1 mr-2">
+        <TouchableOpacity
+          activeOpacity={onPress ? 0.7 : 1}
+          onPress={() => onPress?.(item)}
+          disabled={!onPress}
+          className="flex-row items-center flex-1 mr-2"
+        >
           {avatarUrl ? (
             <Image
               source={{ uri: avatarUrl }}
@@ -240,12 +272,18 @@ export default function PostPanel({
               {item.title}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View className="flex-row items-center">
-          <Text className="text-xs text-neutral-600 font-medium mr-2">
-            {visitsCount} {visitsCount === 1 ? 'visit' : 'visits'}
-          </Text>
+          <TouchableOpacity
+            activeOpacity={onPress ? 0.7 : 1}
+            onPress={() => onPress?.(item)}
+            disabled={!onPress}
+          >
+            <Text className="text-xs text-neutral-600 font-medium mr-2">
+              {visitsCount} {visitsCount === 1 ? 'visit' : 'visits'}
+            </Text>
+          </TouchableOpacity>
           {canShowDelete && (
             <TouchableOpacity
               onPress={handleDeletePress}
@@ -284,11 +322,17 @@ export default function PostPanel({
             </Text>
           </View>
         ) : images.length === 1 ? (
-          <Image
-            source={{ uri: images[0].image_url }}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => handleOpenFullScreen(0)}
             className="w-full h-full"
-            resizeMode="cover"
-          />
+          >
+            <Image
+              source={{ uri: images[0].image_url }}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
         ) : (
           <ScrollView
             horizontal
@@ -300,8 +344,10 @@ export default function PostPanel({
             style={{ width: '100%', height: '100%' }}
           >
             {images.map((img, idx) => (
-              <View
+              <TouchableOpacity
                 key={img.id || idx}
+                activeOpacity={0.9}
+                onPress={() => handleOpenFullScreen(idx)}
                 style={{
                   width: cardImageWidth,
                   height: '100%',
@@ -312,14 +358,17 @@ export default function PostPanel({
                   className="w-full h-full"
                   resizeMode="cover"
                 />
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         )}
 
         {/* Pagination indicator */}
         {images.length > 1 && (
-          <View className="absolute bottom-2 self-center bg-black/45 px-2.5 py-1 rounded-full flex-row items-center">
+          <View
+            pointerEvents="none"
+            className="absolute bottom-2 self-center bg-black/45 px-2.5 py-1 rounded-full flex-row items-center"
+          >
             {images.length <= 6 ? (
               <View className="flex-row items-center">
                 {images.map((_, idx) => (
@@ -351,7 +400,13 @@ export default function PostPanel({
       <View className="p-3 bg-white">
         {/* Status and Hearts Row */}
         <View className="flex-row items-center justify-between mb-2">
-          <PostBadge statusId={item.status_id} />
+          <TouchableOpacity
+            activeOpacity={onPress ? 0.7 : 1}
+            onPress={() => onPress?.(item)}
+            disabled={!onPress}
+          >
+            <PostBadge statusId={item.status_id} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={handleHeartPress}
             disabled={isHearting || propIsHearting}
@@ -370,38 +425,163 @@ export default function PostPanel({
           </TouchableOpacity>
         </View>
 
-        {/* Tags Pills Row */}
-        {tags.length > 0 && (
-          <View className="flex-row flex-wrap items-center gap-1.5 mb-2">
-            {displayedTags.map((t) => (
-              <View
-                key={t.tag_id}
-                className="bg-white border border-neutral-800 rounded-full px-2.5 py-0.5"
-              >
-                <Text className="text-xs text-neutral-800 font-medium">
-                  {t.tags?.name || t.tag_id}
+        {/* Tags and Description area */}
+        <TouchableOpacity
+          activeOpacity={onPress ? 0.7 : 1}
+          onPress={() => onPress?.(item)}
+          disabled={!onPress}
+        >
+          {/* Tags Pills Row */}
+          {tags.length > 0 && (
+            <View className="flex-row flex-wrap items-center gap-1.5 mb-2">
+              {displayedTags.map((t) => (
+                <View
+                  key={t.tag_id}
+                  className="bg-white border border-neutral-800 rounded-full px-2.5 py-0.5"
+                >
+                  <Text className="text-xs text-neutral-800 font-medium">
+                    {t.tags?.name || t.tag_id}
+                  </Text>
+                </View>
+              ))}
+              {overflowTagsCount > 0 && (
+                <Text className="text-xs text-neutral-500 font-medium ml-1">
+                  +{overflowTagsCount} more
                 </Text>
-              </View>
-            ))}
-            {overflowTagsCount > 0 && (
-              <Text className="text-xs text-neutral-500 font-medium ml-1">
-                +{overflowTagsCount} more
-              </Text>
-            )}
-          </View>
-        )}
+              )}
+            </View>
+          )}
 
-        {/* Description Text */}
-        {item.description ? (
-          <Text className="text-xs text-neutral-800 leading-relaxed">
-            {item.description}
-          </Text>
-        ) : (
-          <Text className="text-xs text-neutral-400 italic">
-            No description provided.
-          </Text>
-        )}
+          {/* Description Text */}
+          {item.description ? (
+            <Text className="text-xs text-neutral-800 leading-relaxed">
+              {item.description}
+            </Text>
+          ) : (
+            <Text className="text-xs text-neutral-400 italic">
+              No description provided.
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
+
+      {/* Full-screen Image Viewer Modal */}
+      {images.length > 0 && (
+        <Modal
+          visible={isFullScreenVisible}
+          transparent={true}
+          animationType="fade"
+          statusBarTranslucent={true}
+          onRequestClose={() => setIsFullScreenVisible(false)}
+        >
+          <View className="flex-1 bg-black justify-between">
+            <StatusBar barStyle="light-content" backgroundColor="#000000" />
+
+            {/* Top Bar with Close button and Index Indicator */}
+            <View className="flex-row items-center justify-between px-5 pt-12 pb-3 z-20">
+              <TouchableOpacity
+                onPress={() => setIsFullScreenVisible(false)}
+                activeOpacity={0.7}
+                className="w-10 h-10 rounded-full bg-neutral-800/80 items-center justify-center border border-neutral-700"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              {images.length > 1 && (
+                <View className="bg-neutral-800/80 px-3 py-1.5 rounded-full border border-neutral-700">
+                  <Text className="text-white text-xs font-bold tracking-wider">
+                    {fullScreenIndex + 1} / {images.length}
+                  </Text>
+                </View>
+              )}
+
+              {/* Spacer to balance header */}
+              <View className="w-10 h-10" />
+            </View>
+
+            {/* Full-screen Image or Carousel */}
+            <View className="flex-1 justify-center items-center">
+              {images.length === 1 ? (
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => setIsFullScreenVisible(false)}
+                  className="w-full h-full justify-center items-center"
+                >
+                  <Image
+                    source={{ uri: images[0].image_url }}
+                    style={{ width: windowWidth, height: windowHeight * 0.78 }}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              ) : (
+                <ScrollView
+                  ref={fullScreenScrollRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={(event) => {
+                    const width = event.nativeEvent.layoutMeasurement.width || windowWidth;
+                    if (width > 0) {
+                      const nextIdx = Math.round(event.nativeEvent.contentOffset.x / width);
+                      if (nextIdx >= 0 && nextIdx < images.length && nextIdx !== fullScreenIndex) {
+                        setFullScreenIndex(nextIdx);
+                      }
+                    }
+                  }}
+                  scrollEventThrottle={16}
+                  style={{ width: windowWidth, height: '100%' }}
+                >
+                  {images.map((img, idx) => (
+                    <TouchableOpacity
+                      key={img.id || idx}
+                      activeOpacity={1}
+                      onPress={() => setIsFullScreenVisible(false)}
+                      style={{
+                        width: windowWidth,
+                        height: '100%',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Image
+                        source={{ uri: img.image_url }}
+                        style={{ width: windowWidth, height: windowHeight * 0.78 }}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+
+            {/* Bottom Caption and Location Info */}
+            <View className="px-6 pb-10 pt-3 z-20 bg-neutral-950/80">
+              <Text
+                numberOfLines={1}
+                className="text-white text-base font-bold text-center"
+              >
+                {item.title}
+              </Text>
+              {images[fullScreenIndex]?.caption ? (
+                <Text
+                  numberOfLines={2}
+                  className="text-neutral-300 text-xs text-center mt-1"
+                >
+                  {images[fullScreenIndex].caption}
+                </Text>
+              ) : item.address ? (
+                <Text
+                  numberOfLines={1}
+                  className="text-neutral-400 text-xs text-center mt-1"
+                >
+                  {item.address}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }

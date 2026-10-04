@@ -71,6 +71,10 @@ export default function PostsScreen() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
 
+  const handlePostPress = (post: LocationWithDetails) => {
+    navigation.navigate('PostDetail', { post });
+  };
+
   return (
     <View className="flex-1 bg-[#EBE7E5]">
       {/* Screen Top Bar */}
@@ -105,6 +109,7 @@ export default function PostsScreen() {
             <PostPanel
               item={item}
               avatarUrl={profile?.avatar_url}
+              onPress={handlePostPress}
               onDeleted={handlePostDeleted}
             />
           )}
