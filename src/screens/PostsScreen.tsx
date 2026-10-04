@@ -6,7 +6,6 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   Modal,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -15,7 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../types/navigation';
 import { LocationWithDetails } from '../types/database';
-import { fetchUserPosts, deletePost, PostSortOption } from '../services/postService';
+import { fetchUserPosts, PostSortOption } from '../services/postService';
 import { PostPanel } from '../components/posts';
 
 export default function PostsScreen() {
@@ -28,7 +27,6 @@ export default function PostsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<PostSortOption>('newest');
   const [isSortModalVisible, setIsSortModalVisible] = useState(false);
-  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   // Load user posts from Supabase.
   const loadPosts = async (sortOption = sortBy, isSilent = false) => {
@@ -69,42 +67,8 @@ export default function PostsScreen() {
     loadPosts(newSort);
   };
 
-  const handleDeletePost = (post: LocationWithDetails) => {
-    if (post.status_id === 'approved') {
-      Alert.alert(
-        'Action Not Permitted',
-        'Approved posts cannot be deleted directly. Please contact an admin.'
-      );
-      return;
-    }
-
-    Alert.alert(
-      'Delete Post',
-      `Are you sure you want to delete "${post.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setDeletingPostId(post.id);
-              const result = await deletePost(post.id, effectiveUserId);
-              if (result.success) {
-                setPosts((prev) => prev.filter((p) => p.id !== post.id));
-              } else {
-                Alert.alert(
-                  'Delete Failed',
-                  result.error?.message || 'Could not delete post.'
-                );
-              }
-            } finally {
-              setDeletingPostId(null);
-            }
-          },
-        },
-      ]
-    );
+  const handlePostDeleted = (postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
 
   return (
@@ -141,8 +105,7 @@ export default function PostsScreen() {
             <PostPanel
               item={item}
               avatarUrl={profile?.avatar_url}
-              isDeleting={deletingPostId === item.id}
-              onDelete={handleDeletePost}
+              onDeleted={handlePostDeleted}
             />
           )}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 90 }}

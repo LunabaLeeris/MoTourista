@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,23 @@ import {
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LocationWithDetails } from '../../types/database';
+import { LocationWithDetails, LocationHeartRow } from '../../types/database';
+import { useAuth } from '../../context/AuthContext';
+import { deletePost, toggleLocationHeart } from '../../services/postService';
 import PostBadge from './PostBadge';
 
 export interface PostPanelProps {
   item: LocationWithDetails;
   avatarUrl?: string | null;
-  isDeleting?: boolean;
+  onDeleted?: (postId: string) => void;
   onDelete?: (post: LocationWithDetails) => void;
+  currentUserId?: string;
+  onToggleHeart?: (post: LocationWithDetails) => void;
+  isDeleting?: boolean;
+  isHearting?: boolean;
 }
 
 /**
@@ -27,15 +34,34 @@ export interface PostPanelProps {
 export default function PostPanel({
   item,
   avatarUrl,
-  isDeleting = false,
+  onDeleted,
   onDelete,
+  currentUserId: propUserId,
+  onToggleHeart,
+  isDeleting: propIsDeleting,
+  isHearting: propIsHearting,
 }: PostPanelProps) {
+  const { user } = useAuth();
+  const currentUserId = propUserId || user?.id || '';
+
   const { width: windowWidth } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
+  // Self-contained heart and delete state
+  const [hearts, setHearts] = useState<LocationHeartRow[]>(item.location_hearts || []);
+  const [isHearting, setIsHearting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setHearts(item.location_hearts || []);
+  }, [item.location_hearts]);
+
   const visitsCount = item.location_visits?.length || 0;
-  const heartsCount = item.location_hearts?.length || 0;
+  const isHearted = Boolean(
+    currentUserId && hearts.some((h) => h.user_id === currentUserId)
+  );
+  const heartsCount = hearts.length;
   const images = item.location_images || [];
   const tags = item.location_tags || [];
   const displayedTags = tags.slice(0, 4);
@@ -60,6 +86,131 @@ export default function PostPanel({
       }
     }
   };
+
+  const handleHeartPress = async () => {
+    if (onToggleHeart) {
+      onToggleHeart(item);
+      return;
+    }
+
+    if (!currentUserId) {
+      Alert.alert('Sign In Required', 'Please sign in to heart location posts.');
+      return;
+    }
+
+    if (isHearting || propIsHearting) {
+      return;
+    }
+
+    const prevHearts = hearts;
+    const currentlyHearted = prevHearts.some((h) => h.user_id === currentUserId);
+
+    // Optimistically update hearts state
+    const nextHearts = currentlyHearted
+      ? prevHearts.filter((h) => h.user_id !== currentUserId)
+      : [
+          ...prevHearts,
+          {
+            location_id: item.id,
+            user_id: currentUserId,
+            created_at: new Date().toISOString(),
+          },
+        ];
+
+    setHearts(nextHearts);
+    setIsHearting(true);
+
+    try {
+      const { isHearted: serverIsHearted } = await toggleLocationHeart(
+        item.id,
+        currentUserId
+      );
+
+      // Synchronize exact server state
+      setHearts((cur) => {
+        if (serverIsHearted) {
+          return cur.some((h) => h.user_id === currentUserId)
+            ? cur
+            : [
+                ...cur,
+                {
+                  location_id: item.id,
+                  user_id: currentUserId,
+                  created_at: new Date().toISOString(),
+                },
+              ];
+        } else {
+          return cur.filter((h) => h.user_id !== currentUserId);
+        }
+      });
+    } catch (err: any) {
+      console.error('Error toggling location heart:', err);
+      setHearts(prevHearts);
+      Alert.alert(
+        'Action Failed',
+        err.message || 'Could not update heart. Please try again.'
+      );
+    } finally {
+      setIsHearting(false);
+    }
+  };
+
+  const handleDeletePress = () => {
+    if (onDelete) {
+      onDelete(item);
+      return;
+    }
+
+    if (item.status_id === 'approved') {
+      Alert.alert(
+        'Action Not Permitted',
+        'Approved posts cannot be deleted directly. Please contact an admin.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Delete Post',
+      `Are you sure you want to delete "${item.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!currentUserId) {
+              Alert.alert('Sign In Required', 'Please sign in to delete your post.');
+              return;
+            }
+
+            try {
+              setIsDeleting(true);
+              const result = await deletePost(item.id, currentUserId);
+              if (result.success) {
+                onDeleted?.(item.id);
+              } else {
+                Alert.alert(
+                  'Delete Failed',
+                  result.error?.message || 'Could not delete post.'
+                );
+              }
+            } catch (err: any) {
+              Alert.alert(
+                'Delete Error',
+                err.message || 'An unexpected error occurred while deleting.'
+              );
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const canShowDelete =
+    item.status_id !== 'approved' &&
+    (Boolean(onDelete) || (currentUserId && item.created_by === currentUserId));
 
   return (
     <View className="bg-white rounded-2xl mb-5 overflow-hidden border border-neutral-200 shadow-sm">
@@ -95,14 +246,14 @@ export default function PostPanel({
           <Text className="text-xs text-neutral-600 font-medium mr-2">
             {visitsCount} {visitsCount === 1 ? 'visit' : 'visits'}
           </Text>
-          {item.status_id !== 'approved' && onDelete && (
+          {canShowDelete && (
             <TouchableOpacity
-              onPress={() => onDelete(item)}
-              disabled={isDeleting}
+              onPress={handleDeletePress}
+              disabled={isDeleting || propIsDeleting}
               className="p-1"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              {isDeleting ? (
+              {isDeleting || propIsDeleting ? (
                 <ActivityIndicator size="small" color="#E11D48" />
               ) : (
                 <MaterialCommunityIcons
@@ -201,17 +352,22 @@ export default function PostPanel({
         {/* Status and Hearts Row */}
         <View className="flex-row items-center justify-between mb-2">
           <PostBadge statusId={item.status_id} />
-          <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={handleHeartPress}
+            disabled={isHearting || propIsHearting}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="flex-row items-center py-1 px-1.5 rounded-lg active:bg-rose-50"
+          >
             <MaterialCommunityIcons
-              name="heart-outline"
-              size={16}
+              name={isHearted ? 'heart' : 'heart-outline'}
+              size={18}
               color="#E11D48"
-              className="mr-1"
             />
             <Text className="text-xs font-semibold text-neutral-700 ml-1">
               {heartsCount} {heartsCount === 1 ? 'heart' : 'hearts'}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Tags Pills Row */}
